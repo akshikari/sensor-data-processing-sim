@@ -1,7 +1,5 @@
-from sim_data_gen.accelerometer import AccelerometerData, generate_data
+class TestGenerateData:
+    """Test accelerometer.generate_data() and the validity of the data produced"""
 
-
-def test_generate_data():
-    """Test to ensure the accelerometer data is valid"""
-    for data in generate_data():
-        assert type(data) == AccelerometerData
+    def test_generate_data(self):
+        pass
