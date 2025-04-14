@@ -9,7 +9,7 @@ from uuid import uuid4
 import numpy as np
 import numpy.typing as npt
 from scipy.spatial.transform import Rotation as R
-from pydantic import UUID4, BaseModel, PositiveInt
+from pydantic import UUID4, BaseModel, PositiveFloat, PositiveInt, validate_call
 from pydantic.dataclasses import dataclass
 
 
@@ -38,11 +38,11 @@ class GenerateDataParams:
     amplitude_roll: float = 0.05  # radians
     amplitude_pitch: float = 0.05  # radians
 
-    # Base Orientation - Adjust oscillation starting points
+    # Base Orientation - Adjusts oscillation starting points
     base_pitch: float = 0.0  # radians
     base_roll: float = 0.03  # radians
 
-    # Phase Shifts - Adjust oscillation timings
+    # Phase Shifts - Adjusts oscillation timings
     phase_sway: float = 0.0  # radians
     phase_bounce: float = np.pi / 2  # radians
     phase_roll: float = np.pi  # radians
@@ -56,15 +56,18 @@ class GenerateDataParams:
 
 
 # TODO: Future considerations: parallel processing, new fxn using generators to create a stream -- yield one record at a time or in specified batch sizes
+@validate_call
 def generate_data(
-    frequency: PositiveInt,
-    total_time: PositiveInt,
+    frequency: PositiveInt | PositiveFloat,
+    total_time: PositiveInt | PositiveFloat,
+    start_time: datetime | None = None,
     params: GenerateDataParams | None = None,
 ) -> list[AccelerometerData]:
     """Generates simulated accelerometer data
-    @frequency: how many data records per second to produce
-    @total_time: the total time interval in seconds for which to produce data
-    @as_json: flag to return the response as json
+    @frequency: How many data records per second to produce
+    @total_time: The total time interval in seconds for which to produce data
+    @start_time: The desired start timestamp for the sample data. Defaults to the timestamp of when generate_data is called.
+    @params: Parameters specific to generating accelerometer data such as sway, bounce, roll, and pitch parameters.
 
     A few assumptions:
     - Primary goal is to simulate "real enough" accelerometer data without having to simulate the entire robot
@@ -83,7 +86,7 @@ def generate_data(
     # Calculate constants
     gravity_vector = np.array([0, 0, -params.gravity])
     sensor_id = uuid4()
-    start_ts = datetime.now(timezone.utc)
+    start_ts = start_time if start_time else datetime.now(timezone.utc)
 
     # Generate time vector
     time_vector: npt.NDArray[np.float64] = np.linspace(
@@ -151,10 +154,7 @@ def generate_data(
     a_final = a_prop + noise
 
     # Format output
-    time_deltas: list[timedelta] = []
-    for sec in time_vector:
-        time_deltas.append(timedelta(seconds=sec))
-    # time_deltas = [timedelta(seconds=sec) for sec in time_vector]
+    time_deltas = [timedelta(seconds=sec) for sec in time_vector]
     output: list[AccelerometerData] = [
         AccelerometerData(
             timestamp=start_ts + time_deltas[i],
