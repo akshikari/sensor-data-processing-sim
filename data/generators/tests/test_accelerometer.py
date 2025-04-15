@@ -1,5 +1,5 @@
 from uuid import UUID
-from sim_data_gen.accelerometer import (
+from generators.accelerometer import (
     AccelerometerData,
     GenerateDataParams,
     generate_data,
