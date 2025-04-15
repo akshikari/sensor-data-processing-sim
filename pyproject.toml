@@ -1,13 +1,13 @@
 [project]
 name = "sensor-data-sim"
 version = "0.1.0"
-description = "Add your description here"
+description = "Project centered around the generation, processing, analysis, and display of mock sensor data."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
 [tool.uv.workspace]
-members = ["data/sim_data_gen"]
+members = ["data/generators"]
 
 [dependency-groups]
 dev = [
