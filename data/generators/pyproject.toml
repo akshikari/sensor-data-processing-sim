@@ -1,7 +1,7 @@
 [project]
-name = "sim-data-gen"
+name = "generators"
 version = "0.1.0"
-description = "Add your description here"
+description = "Various functions for generating mock data"
 readme = "README.md"
 authors = [
     { name = "Abhi Kumar", email = "abhinavbkumar@protonmail.com" }
