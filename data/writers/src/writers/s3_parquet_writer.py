@@ -63,7 +63,7 @@ class S3ParquetWriter:
             raise
 
     def _get_partition_path(
-        self, record_dict: dict[str, float | UUID | datetime]
+        self, record_dict: dict[str, float | UUID | str | datetime]
     ) -> str | None:
         """
         Generate Hive-style partition path string from record's data.
@@ -117,7 +117,7 @@ class S3ParquetWriter:
 
         try:
             # Convert Pydantic models to list of dictionaries
-            record_dicts: list[dict[str, float | UUID | datetime]] = [
+            record_dicts: list[dict[str, float | UUID | str | datetime]] = [
                 record.model_dump(mode="python") for record in data_batch
             ]
 
