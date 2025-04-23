@@ -1,7 +1,6 @@
 import logging
-from typing import Any
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pandas as pd
 from pydantic import BaseModel
@@ -63,7 +62,9 @@ class S3ParquetWriter:
             )
             raise
 
-    def _get_partition_path(self, record_dict: dict[str, Any]) -> str | None:
+    def _get_partition_path(
+        self, record_dict: dict[str, float | UUID | datetime]
+    ) -> str | None:
         """
         Generate Hive-style partition path string from record's data.
 
@@ -116,7 +117,7 @@ class S3ParquetWriter:
 
         try:
             # Convert Pydantic models to list of dictionaries
-            record_dicts: list[dict[str, Any]] = [
+            record_dicts: list[dict[str, float | UUID | datetime]] = [
                 record.model_dump(mode="python") for record in data_batch
             ]
 
