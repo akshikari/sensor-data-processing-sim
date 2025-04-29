@@ -16,8 +16,3 @@ dependencies = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[dependency-groups]
-dev = [
-    "scipy-stubs>=1.15.2.2",
-]
