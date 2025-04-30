@@ -1,16 +1,17 @@
 [project]
-name = "generators"
+name = "writers"
 version = "0.1.0"
-description = "Various functions for generating mock data"
+description = "Package containing writers that take data and write to a specified destination"
 readme = "README.md"
 authors = [
     { name = "Abhi Kumar", email = "abhinavbkumar@protonmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "numpy>=2.2.4",
+    "boto3[s3]>=1.37.1",
+    "pandas>=2.2.3",
+    "pyarrow>=19.0.1",
     "pydantic>=2.11.1",
-    "scipy>=1.15.2",
 ]
 
 [build-system]
