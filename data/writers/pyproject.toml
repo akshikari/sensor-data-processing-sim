@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "boto3[s3]>=1.37.1",
+    "boto3>=1.37.1",
     "pandas>=2.2.3",
     "pyarrow>=19.0.1",
     "pydantic>=2.11.1",
