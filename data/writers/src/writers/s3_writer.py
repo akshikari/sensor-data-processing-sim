@@ -117,7 +117,6 @@ class S3Writer:
             "s3",
             region_name=self._aws_config["region_name"],
             config=config,
-            endpoint_url=self._aws_config["endpoint_url"],
         )
 
     def _get_partition_path(self, record_dict: Mapping[str, Any]) -> str | None:
@@ -159,6 +158,7 @@ class S3Writer:
             return
 
         try:
+            # TODO: Move this to transformers package
             # Determine partition path from the first record
             partition_path: str | None = self._get_partition_path(data_batch[0])
             if partition_path is None:
@@ -172,7 +172,6 @@ class S3Writer:
             if self.file_type == "parquet":
                 df.to_parquet(
                     buffer,
-                    coerce_timestamps="ms",
                     allow_truncated_timestamps=True,
                 )
             elif self.file_type == "csv":
