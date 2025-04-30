@@ -56,6 +56,7 @@ class GenerateDataParams:
 
 
 # TODO: Future considerations: parallel processing, new fxn using generators to create a stream -- yield one record at a time or in specified batch sizes
+# TODO: Consider timezone-aware timestamps. For real-world scenario of data coming from robots across multiple timezones
 @validate_call
 def generate_data(
     frequency: PositiveInt | PositiveFloat,
@@ -64,16 +65,17 @@ def generate_data(
     params: GenerateDataParams | None = None,
 ) -> list[AccelerometerData]:
     """Generates simulated accelerometer data
-    @frequency: How many data records per second to produce
-    @total_time: The total time interval in seconds for which to produce data
-    @start_time: The desired start timestamp for the sample data. Defaults to the timestamp of when generate_data is called.
-    @params: Parameters specific to generating accelerometer data such as sway, bounce, roll, and pitch parameters.
 
     A few assumptions:
     - Primary goal is to simulate "real enough" accelerometer data without having to simulate the entire robot
     - This is for a quadriped robot walking on horizontal, flat plane at a constant pace
     - Given this, we assume the robot's walking pattern follows a Simple Harmonic Motion pattern and apply the SHM formula
 
+    :param frequency: How many data records per second to produce
+    :param total_time: The total time interval in seconds for which to produce data
+    :param start_time: The desired start timestamp for the sample data. Defaults to the timestamp of when generate_data is called.
+    :param params: Parameters specific to generating accelerometer data such as sway, bounce, roll, and pitch parameters.
+    :returns: Returns a list of AccelerometerData objects containing x,y,z acceleration values along with a sensor ID and timestamp
     """
     if not params:
         params = GenerateDataParams()
