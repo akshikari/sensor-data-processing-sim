@@ -1,6 +1,6 @@
 resource "aws_s3_bucket" "raw_accelerometer_data" {
   # Using bucket_prefix ensures a unique name by adding a random suffix
-  bucket_prefix = "${var.project_name}-raw-accelerometor-data"
+  bucket_prefix = "${var.project_name}-raw-accelerometer-data"
 
   tags = {
     Project   = var.project_name
