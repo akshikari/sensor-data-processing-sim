@@ -126,6 +126,7 @@ class S3Writer:
         Assumptions:
         - If passing in dates, assume it's already been partitioned into desired specificity e.g. year={year}, month={month}, etc.
         """
+        # TODO: Move this to a transformer
         try:
             parts: list[str] = []
             for column in self.partition_columns:
