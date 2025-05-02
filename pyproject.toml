@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [tool.uv.workspace]
-members = ["data/generators", "data/writers", "data/transformers"]
+members = ["data/generators", "data/writers", "data/transformers", "data/streams"]
 
 [dependency-groups]
 test = [
