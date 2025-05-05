@@ -23,3 +23,4 @@ Also just as a bonus I used this project to learn development using tmux and neo
 - [Python](./python.md)
 - [Tooling](./tooling.md)
 - [Robotics](./robotics.md)
+- [Data Management](./data-storage-manipulation.md)
