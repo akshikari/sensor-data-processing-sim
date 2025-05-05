@@ -6,13 +6,11 @@ Some important details:
 
 - I will be creating two "versions" of some components like data generation
   - One version will simulate a real-time environment. Components can be run
-    as services
+    as services.
   - The second version will have everything scheduled via Airflow. Since this
     is just a simulation I don't want to incur the costs of keeping things
-    constantly running
-
-Written using organic, free-range, GMO-free and LLM-free code
-because \<Space> + \<Tab> ain't learnin'\*\*
+    constantly running.
+  - This will be a phased approach with the real-time component coming later.
 
 ## Project Brief
 
@@ -23,30 +21,44 @@ sensor data. For the time being the data will be generated mock data.
 
 ### Data Simulation
 
-For now, just some Python script(s) that will generate some
-time-series data and publish to Kafka. Will containerize this
-and push to Cloud Run and use Cloud Scheduler.
+For now, just some Python script(s) that will generate some mock sensor data.
 
 ### Data Ingestion
 
-Some Kafka listeners that will take the data and write to DB or GCS.
-Again will have variants for real-time env sim and just batch jobs
+Taking a phased approach. Phase 1 will be just dumping the raw data into S3, then to Timestream.
 
 ### Data Processing
 
-A number of python clean up and potentially some pyspark jobs to process
-the data
+A number of python clean up and potentially some pyspark jobs to process the data
 
 ### Orchestration
 
-Just airflow
+Good ol' Apache Airflow. Looks like v3 came out relatively recently
 
 ### Infrastructure
 
-The cloud (GCP)
+- Storage:
+  - AWS S3
+  - AWS Timestream (WIP)
+- Workflow Orchestration (WIP)
+  - AWS MWAA (AWS Managed Workflows for Apache Airflow), using DockerOperator/KubernetesPodOperator
+    - Or maybe just deploy my own Airflow. Latest version available via MWAA is 2.10.1
+- Data Pipelines (WIP)
+  - Custom framework
+- Data Analytics/Visualization (WIP)
 
 ### Deployment
 
 Terraform
 
-\*\* Turns out simulating accelerometer data is a bit challenging. Definitely had to lean on some LLMs to grok some basic concepts and even write some of the math/physics-heavy code. More on that [here](/learnings/README.md)
+## New Tools Learned for this Project
+
+- Terraform
+- AWS (new but similar to GCP)
+- Apache Airflow
+- Apache Parquet
+- Apache Arrow
+- NumPy/SciPy
+- Pandas
+- Great Expectations
+- uv
