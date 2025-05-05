@@ -104,6 +104,7 @@ def run_pipeline(configs: PipelineConfigs) -> bool:
         writer.write_batch(record_dicts)
         # HACK: END
 
+        logger.info("Pipeline completed successfully.")
         return True
     except Exception as err:
         # TODO: Tighten up error handling
@@ -145,12 +146,6 @@ if __name__ == "__main__":
             "Configuration loaded successfully. Starting pipeline {pipeline name/id}..."
         )
         success = run_pipeline(configs)
-        if success:
-            logger.info("Pipeline completed successfully.")
-            sys.exit(0)
-        else:
-            logger.error("Pipeline finished with errors.")
-            sys.exit(1)
     except Exception as err:
         logger.exception(
             "An unexpected error occurred during pipeline execution:\n%s", err
