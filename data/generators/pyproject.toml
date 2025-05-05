@@ -3,9 +3,6 @@ name = "generators"
 version = "0.1.0"
 description = "Various functions for generating mock data"
 readme = "README.md"
-authors = [
-    { name = "Abhi Kumar", email = "abhinavbkumar@protonmail.com" }
-]
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.2.4",

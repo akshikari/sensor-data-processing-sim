@@ -3,9 +3,6 @@ name = "writers"
 version = "0.1.0"
 description = "Package containing writers that take data and write to a specified destination"
 readme = "README.md"
-authors = [
-    { name = "Abhi Kumar", email = "abhinavbkumar@protonmail.com" }
-]
 requires-python = ">=3.12"
 dependencies = [
     "boto3>=1.37.1",

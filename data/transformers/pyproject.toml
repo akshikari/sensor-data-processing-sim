@@ -3,9 +3,6 @@ name = "transformers"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Abhi Kumar", email = "abhinavbkumar@protonmail.com" }
-]
 requires-python = ">=3.12"
 dependencies = []
 
