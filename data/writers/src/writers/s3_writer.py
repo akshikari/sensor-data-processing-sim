@@ -143,7 +143,67 @@ class S3Writer:
             logger.exception("Error generating partition path: %s", err)
             return None
 
-    def write_batch(self, data_batch: list[dict[str, Any]]) -> None:
+    def write_batch(self, data_batch: list[dict[str, Any]] | pd.DataFrame) -> None:
+        """
+        Writes incoming data_batch objects to a partitioned Parquet file or CSV file in AWS S3.
+
+        Assumptions:
+        - Input is a list of dictionaries with consistent keys.
+        - All records in the batch belong to the same logical partition as determined by the data in the first record
+        - Data contains keys corresponding to `partition_columns`
+
+        :param data_batch: List of dict objects or pandas DataFrame to be written to the self.bucket_name S3 Bucket under the self.partition_path
+        """
+        is_df = isinstance(data_batch, pd.DataFrame)
+        if (is_df and data_batch.empty) or (not is_df and not data_batch):
+            logger.info("No data provided, no write operations performed.")
+            return
+
+        try:
+            # TODO: Move this to transformers package
+            # Determine partition path from the first record
+            first_record = data_batch.iloc[0].to_dict() if is_df else data_batch[0]
+            partition_path: str | None = self._get_partition_path(first_record)
+            if partition_path is None:
+                raise ValueError(
+                    "Could not determine the partition path for the batch."
+                )
+
+            df = pd.DataFrame.from_records(data_batch) if not is_df else data_batch
+
+            buffer = BytesIO()
+            if self.file_type == "parquet":
+                df.to_parquet(
+                    buffer,
+                    allow_truncated_timestamps=True,
+                )
+            elif self.file_type == "csv":
+                df.to_csv(buffer, index=False)
+            else:
+                raise Exception(f"File type {self.file_type} is not supported.")
+
+            buffer.seek(0)
+
+            curr_time = datetime.now(timezone.utc)
+            file_id = uuid4()
+            filename = (
+                f"{file_id}_{curr_time.strftime('%Y%m%d-%H%M%S')}.{self.file_type}"
+            )
+            s3_object_key = "/".join(
+                [self.base_s3_prefix.rstrip("/").lstrip("/"), partition_path, filename]
+            )
+
+            self.s3_client.put_object(
+                Bucket=self.bucket_name, Key=s3_object_key, Body=buffer.getvalue()
+            )
+
+            logger.info("Successfully wrotefile to S3")
+
+        except Exception as err:
+            logger.exception("Failed to write batch to S3:\n%s", err)
+            raise
+
+    def write_batch_df(self, data_batch: pd.DataFrame) -> None:
         """
         Writes a batch of Pydantic model objects to a partitioned Parquet file in AWS S3.
 
@@ -154,29 +214,29 @@ class S3Writer:
 
         :param data_batch: List of objects to be written to the self.bucket_name S3 Bucket under the self.partition_path
         """
-        if not data_batch:
+        if data_batch.empty:
             logger.info("No data provided, no write operations performed.")
             return
 
         try:
             # TODO: Move this to transformers package
             # Determine partition path from the first record
-            partition_path: str | None = self._get_partition_path(data_batch[0])
+            partition_path: str | None = self._get_partition_path(
+                data_batch.iloc[0].to_dict()
+            )
             if partition_path is None:
                 raise ValueError(
                     "Could not determine the partition path for the batch."
                 )
 
-            df = pd.DataFrame.from_records(data_batch)
-
             buffer = BytesIO()
             if self.file_type == "parquet":
-                df.to_parquet(
+                data_batch.to_parquet(
                     buffer,
                     allow_truncated_timestamps=True,
                 )
             elif self.file_type == "csv":
-                df.to_csv(buffer, index=False)
+                data_batch.to_csv(buffer, index=False)
             else:
                 raise Exception(f"File type {self.file_type} is not supported.")
 
