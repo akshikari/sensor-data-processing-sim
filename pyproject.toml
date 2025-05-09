@@ -9,6 +9,12 @@ dependencies = []
 [tool.uv.workspace]
 members = ["data/generators", "data/writers", "data/transformers", "data/streams"]
 
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselct with '-m \"not slow\"')",
+    "veryslow: marks tests as very slow (deselect with '-m \"not veryslow\"')",
+]
+
 [dependency-groups]
 test = [
     "pytest>=8.3.5",
@@ -27,4 +33,8 @@ lint = [
 docs = [
     "pydata-sphinx-theme>=0.16.1",
     "sphinx>=8.2.3",
+]
+dev = [
+    "jupyterlab>=4.4.1",
+    "matplotlib>=3.10.1",
 ]
