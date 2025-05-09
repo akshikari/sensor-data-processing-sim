@@ -219,8 +219,6 @@ class TestGenerateData:
             np.diff(result_df["timestamp"]).astype("timedelta64[ns]").astype(np.float64)
             / 1e9
         )
-        print(deltas_seconds)
-        print(expected_delta)
         assert np.allclose(deltas_seconds, expected_delta, atol=1e-6)
 
         total_duration_sec = (
