@@ -2,18 +2,20 @@
 Module for generating mock accelerometer data
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from typing import TypedDict
 from uuid import uuid4
 
 
 import numpy as np
+import pandas as pd
 import numpy.typing as npt
 from scipy.spatial.transform import Rotation as R
-from pydantic import UUID4, BaseModel, PositiveFloat, PositiveInt, validate_call
+from pydantic import UUID4, PositiveFloat, PositiveInt, validate_call
 from pydantic.dataclasses import dataclass
 
 
-class AccelerometerData(BaseModel):
+class AccelerometerData(TypedDict):
     """Data model for accelerometer time series data"""
 
     timestamp: datetime
@@ -63,7 +65,7 @@ def generate_data(
     total_time: PositiveInt | PositiveFloat,
     start_time: datetime | None = None,
     params: GenerateDataParams | None = None,
-) -> list[AccelerometerData]:
+) -> pd.DataFrame:
     """Generates simulated accelerometer data
 
     A few assumptions:
@@ -83,7 +85,7 @@ def generate_data(
     # Determine total number of samples/records to generate
     num_samples: int = int(frequency * total_time)
     if num_samples <= 0:
-        return []
+        return pd.DataFrame()
 
     # Calculate constants
     gravity_vector = np.array([0, 0, -params.gravity])
@@ -144,7 +146,8 @@ def generate_data(
     a_linear_world = np.stack([accel_x, accel_y, accel_z], axis=-1)
 
     # Calculate proper acceleration (in body frame)
-    # a_prop = R_world_to_body @ (a_linear_world - g_vector)
+    # For reference: a_prop = R_world_to_body @ (a_linear_world - gravity_vector)
+    # Using Einstein Summation method instead
     accel_diff_world = a_linear_world - gravity_vector
     a_prop: npt.NDArray[np.float64] = np.einsum(
         "nij, nj->ni", R_world_to_body, accel_diff_world
@@ -153,19 +156,25 @@ def generate_data(
     # Add sensor noise
     noise = np.random.normal(0, params.noise_std_dev, size=(num_samples, 3))
 
+    # Calculate final acceleration matrix
     a_final = a_prop + noise
 
+    # Generate timestamps
+    start_ts_np = np.datetime64(start_ts, "ns")
+    time_deltas = (time_vector * 1e9).astype("timedelta64[ns]")
+    timestamps: npt.NDArray[np.datetime64] = start_ts_np + time_deltas
     # Format output
-    time_deltas = [timedelta(seconds=sec) for sec in time_vector]
-    output: list[AccelerometerData] = [
-        AccelerometerData(
-            timestamp=start_ts + time_deltas[i],
-            sensor_id=sensor_id,
-            accel_x=a_final[i, 0],
-            accel_y=a_final[i, 1],
-            accel_z=a_final[i, 2],
-        )
-        for i in range(num_samples)
-    ]
+    sensor_ids = np.full(num_samples, sensor_id, dtype=object)
+    df = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "sensor_id": sensor_ids,
+            "accel_x": a_final[:, 0],
+            "accel_y": a_final[:, 1],
+            "accel_z": a_final[:, 2],
+        }
+    )
+    # Numpy datetime64 objects are not timezone-aware So we must re-add the timezone in formation
+    df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
 
-    return output
+    return df
