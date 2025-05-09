@@ -2426,7 +2426,7 @@ wheels = [
 
 [[package]]
 name = "writers"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "data/writers" }
 dependencies = [
     { name = "boto3" },
