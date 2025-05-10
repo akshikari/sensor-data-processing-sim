@@ -7,6 +7,7 @@ from writers.s3_writer import S3Writer
 from streams.pipe_accelerometer_to_s3 import run_pipeline, PipelineConfigs
 from generators.accelerometer import AccelerometerData, GenerateDataParams
 
+import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
@@ -42,8 +43,10 @@ def mock_dependencies(mocker: MockerFixture) -> dict[str, MagicMock]:
     Mocks generate_data and S3Writer, returning the mocks in a dictionary.
     Uses the mocker fixture provided by pytest-mock.
     """
-    mock_gen = mocker.patch(
-        "streams.pipe_accelerometer_to_s3.generate_data", return_value=[]
+    mock_gen_default_resp = pd.DataFrame()  # default return value
+    mock_generator = mocker.patch(
+        "streams.pipe_accelerometer_to_s3.generate_data",
+        return_value=mock_gen_default_resp,
     )
 
     mock_s3writer_class = mocker.patch(
@@ -53,32 +56,42 @@ def mock_dependencies(mocker: MockerFixture) -> dict[str, MagicMock]:
     mock_s3writer_class.return_value = mock_writer_instance
 
     return {
-        "generate_data": mock_gen,
+        "generate_data": mock_generator,
         "S3Writer": mock_s3writer_class,
         "s3_writer_instance": mock_writer_instance,
     }
 
 
-def create_dummy_data(count: int) -> list[AccelerometerData]:
+def create_dummy_data(count: int) -> pd.DataFrame:
     """Creates a list of simple AccelerometerData objects"""
+    if count == 0:
+        return pd.DataFrame(
+            columns=["timestamp", "sensor_id", "accel_x", "accel_y", "accel_z"]
+        )
+
     now = datetime.now(timezone.utc)
-    sid = uuid4()
-    return [
+    sensor_id = uuid4()
+
+    data_dicts: list[AccelerometerData] = [
         AccelerometerData(
-            timestamp=now + timedelta(seconds=i * 0.1),
-            sensor_id=sid,
+            timestamp=(now + timedelta(seconds=i * 0.1)).replace(tzinfo=timezone.utc),
+            sensor_id=sensor_id,
             accel_x=float(i),
-            accel_y=float(i),
-            accel_z=float(i),
+            accel_y=float(i) + 0.1,
+            accel_z=float(i) + 0.2,
         )
         for i in range(count)
     ]
+
+    df = pd.DataFrame.from_records(data_dicts)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    df["sensor_id"] = df["sensor_id"].astype(str)
+    return df
 
 
 class TestRunPipeline:
     def test_successful_run(
         self,
-        mocker: MockerFixture,
         default_pipeline_config: PipelineConfigs,
         mock_dependencies: dict[str, MagicMock],
         caplog: pytest.LogCaptureFixture,
@@ -94,7 +107,7 @@ class TestRunPipeline:
         # Function call asssertions
         assert success is True
         mock_dependencies["generate_data"].assert_called_once()
-        call_args, call_kwargs = mock_dependencies["generate_data"].call_args
+        _, call_kwargs = mock_dependencies["generate_data"].call_args
         assert call_kwargs.get("frequency") == 10
         assert call_kwargs.get("total_time") == 1
         assert isinstance(call_kwargs.get("params"), GenerateDataParams)
@@ -108,21 +121,16 @@ class TestRunPipeline:
 
         # Data quality assertions
         mock_dependencies["s3_writer_instance"].write_batch.assert_called_once()
-        written_batch = mock_dependencies["s3_writer_instance"].write_batch.call_args[
-            0
-        ][0]
-        assert isinstance(written_batch, list)
-        assert len(written_batch) == 10
-        first_written_record = written_batch[0]
-        assert isinstance(first_written_record, dict)
-        assert "year" in first_written_record
-        assert "month" in first_written_record
-        assert "day" in first_written_record
-        assert "hour" in first_written_record
-        assert isinstance(first_written_record.get("sensor_id"), str)
-        assert first_written_record.get("accel_x") == 0.0
+        written_df = mock_dependencies["s3_writer_instance"].write_batch.call_args[0][0]
+        assert isinstance(written_df, pd.DataFrame)
+        assert len(written_df) == 10
+        assert "year" in written_df.columns
+        assert "month" in written_df.columns
+        assert "day" in written_df.columns
+        assert "hour" in written_df.columns
+        assert "sensor_id" in written_df.columns
+        assert pd.api.types.is_string_dtype(written_df["sensor_id"])
 
-        print(caplog.text)
         assert "Pipeline completed successfully" in caplog.text
 
     def test_no_data_generated(
@@ -146,7 +154,6 @@ class TestRunPipeline:
 
     def test_writer_init_fails(
         self,
-        mocker: MockerFixture,
         default_pipeline_config: PipelineConfigs,
         mock_dependencies: dict[str, MagicMock],
         caplog: pytest.LogCaptureFixture,

@@ -1,6 +1,6 @@
 [project]
 name = "sensor-data-sim"
-version = "0.1.0"
+version = "0.2.0"
 description = "Project centered around the generation, processing, analysis, and display of mock sensor data."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,6 +8,12 @@ dependencies = []
 
 [tool.uv.workspace]
 members = ["data/generators", "data/writers", "data/transformers", "data/streams"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselct with '-m \"not slow\"')",
+    "veryslow: marks tests as very slow (deselect with '-m \"not veryslow\"')",
+]
 
 [dependency-groups]
 test = [
@@ -27,4 +33,8 @@ lint = [
 docs = [
     "pydata-sphinx-theme>=0.16.1",
     "sphinx>=8.2.3",
+]
+dev = [
+    "jupyterlab>=4.4.1",
+    "matplotlib>=3.10.1",
 ]
