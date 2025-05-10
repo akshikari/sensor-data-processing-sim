@@ -77,7 +77,7 @@ def generate_data(
     :param total_time: The total time interval in seconds for which to produce data
     :param start_time: The desired start timestamp for the sample data. Defaults to the timestamp of when generate_data is called.
     :param params: Parameters specific to generating accelerometer data such as sway, bounce, roll, and pitch parameters.
-    :returns: Returns a list of AccelerometerData objects containing x,y,z acceleration values along with a sensor ID and timestamp
+    :returns: Returns a pandas DataFrame containing x,y,z acceleration values along with a sensor ID and timestamp
     """
     if not params:
         params = GenerateDataParams()
