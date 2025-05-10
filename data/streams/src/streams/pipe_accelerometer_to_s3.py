@@ -7,9 +7,10 @@ from typing import Any
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 
+import pandas as pd
+
 from generators.accelerometer import (
     GenerateDataParams,
-    AccelerometerData,
     generate_data,
 )
 from writers import S3Writer
@@ -58,41 +59,29 @@ def run_pipeline(configs: PipelineConfigs) -> bool:
         frequency: int | float = configs.source.get("frequency", 100)
         total_time: int | float = configs.source.get("total_time", 10)
         start_ts: datetime = datetime.now(timezone.utc)
-        data: list[AccelerometerData] = generate_data(
+        data_df: pd.DataFrame = generate_data(
             frequency=frequency,
             total_time=total_time,
             start_time=start_ts,
             params=source_params,
         )
-        if not data:
+        if data_df.empty:
             logging.warning("No data generated")
             return False
-        logging.info(f"Generated {len(data)} record(s).")
+        logging.info(f"Generated {len(data_df)} record(s).")
 
         # TODO: Write transformers to do the below steps
         logging.info(
             "Applying specified transformations: %s",
             ", ".join(["Mappings, GeneratePartitionPathFields"]),
-        )
-        record_dicts: list[dict[str, Any]] = []
-        for record in data:
-            record_dict = record.model_dump(mode="python")
-            # parquet doesn't like Python UUID type values
-            record_dict["sensor_id"] = str(record_dict["sensor_id"])
-            timestamp: datetime = record_dict["timestamp"]
-            record_dict.update(
-                {
-                    "year": str(timestamp.year),
-                    "month": f"{timestamp.month:02d}",
-                    "day": f"{timestamp.day:02d}",
-                    "hour": f"{timestamp.hour:02d}",
-                }
-            )
-            record_dicts.append(record_dict)
-        if not record_dicts:
-            logging.warning("No data remains after applying specified transformations")
-            return False
-        logging.info(f"Applied transformations to {len(record_dicts)} record(s)")
+        )  # logging statement will eventually draw and list actual transformer functions being used
+
+        data_df["year"] = data_df["timestamp"].dt.year.astype(str)
+        data_df["month"] = data_df["timestamp"].dt.strftime("%m")
+        data_df["day"] = data_df["timestamp"].dt.strftime("%d")
+        data_df["hour"] = data_df["timestamp"].dt.strftime("%H")
+
+        logging.info(f"Applied transformations to {len(data_df)} record(s)")
 
         logging.info("Writing batch to destination...")
         writer = S3Writer(
@@ -101,7 +90,7 @@ def run_pipeline(configs: PipelineConfigs) -> bool:
             partition_columns=["year", "month", "day", "hour", "sensor_id"],
             file_type=configs.destination.get("file_type", "parquet"),
         )
-        writer.write_batch(record_dicts)
+        writer.write_batch(data_df)
         # HACK: END
 
         logger.info("Pipeline completed successfully.")
