@@ -1,6 +1,6 @@
 [project]
 name = "sensor-data-sim"
-version = "0.1.0"
+version = "0.2.0"
 description = "Project centered around the generation, processing, analysis, and display of mock sensor data."
 readme = "README.md"
 requires-python = ">=3.12"
