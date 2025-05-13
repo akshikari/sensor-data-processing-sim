@@ -35,6 +35,7 @@ docs = [
     "sphinx>=8.2.3",
 ]
 dev = [
+    "ipympl>=0.9.7",
     "jupyterlab>=4.4.1",
     "matplotlib>=3.10.1",
 ]
