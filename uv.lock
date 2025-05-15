@@ -2335,6 +2335,12 @@ wheels = [
 name = "transformers"
 version = "0.1.0"
 source = { editable = "data/transformers" }
+dependencies = [
+    { name = "pandas" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pandas", specifier = ">=2.2.3" }]
 
 [[package]]
 name = "types-awscrt"
