@@ -337,6 +337,7 @@ class TestGenerateAnomalousData:
         limp_step_mask_vector: npt.NDArray[np.bool] = (
             step_indices % anomalous_params.step_frequency
         ) == (anomalous_params.step_frequency - 1)
+
         # Assess whether the right samples corresponding with the "limp" step are affected
         limp_samples = anomalous_data.loc[limp_step_mask_vector, "accel_z"]
         normal_samples = anomalous_data.loc[~limp_step_mask_vector, "accel_z"]
@@ -347,9 +348,7 @@ class TestGenerateAnomalousData:
         # Assess data distribution is properly affected
         normal_z_std = normal_data["accel_z"].std()
         anomalous_z_std = anomalous_data["accel_z"].std()
-
         assert anomalous_z_std < normal_z_std
-
         assert normal_data["accel_x"].std() == pytest.approx(
             anomalous_data["accel_x"].std(), rel=0.01
         )
