@@ -1,5 +1,6 @@
 from uuid import UUID
 from generators.accelerometer import (
+    AnomalousDataModifierParams,
     GenerateDataParams,
     generate_data,
 )
@@ -17,6 +18,7 @@ from pydantic import ValidationError
 
 TEST_CASES = {
     "invalidInputs": [
+        pytest.param(None, None, ValidationError, id="null_input"),
         pytest.param(42, 0, ValidationError, id="zero_time"),
         pytest.param(0, 42, ValidationError, id="zero_frequency"),
         pytest.param(0, 0, ValidationError, id="zero_frequency_and_time"),
@@ -38,6 +40,16 @@ TEST_CASES = {
         pytest.param(
             1000, 1000, 1_000_000, id="1M_samples", marks=pytest.mark.veryslow
         ),  # 1 million samples
+    ],
+    "anomalousInvalidParameters": [
+        pytest.param(
+            None, None, None, None, ValidationError, id="anomaly_null_input_params"
+        ),
+        pytest.param(0.0, 0.0, 0.0, 0.0, ValidationError, id="all_zeroes"),
+        pytest.param(10.0, -3.0, 2.0, 4, ValidationError, id="all_zeroes"),
+        pytest.param(-10.0, 3.0, 2.0, 4, ValidationError, id="all_zeroes"),
+        pytest.param(10.0, 3.0, -2.0, 4, ValidationError, id="all_zeroes"),
+        pytest.param(10.0, 3.0, 2.0, -4, ValidationError, id="all_zeroes"),
     ],
 }
 
@@ -122,7 +134,7 @@ class TestGenerateData:
         )
 
         result_df: pd.DataFrame = generate_data(
-            frequency=frequency, total_time=time, params=params
+            frequency=frequency, total_time=time, generate_data_params=params
         )
         assert len(result_df) == expected_samples
 
@@ -162,7 +174,7 @@ class TestGenerateData:
             frequency=frequency,
             total_time=time,
             start_time=datetime.now(),
-            params=params,
+            generate_data_params=params,
         )
 
         assert len(result_df) == expected_samples
@@ -244,7 +256,7 @@ class TestGenerateData:
 
         start_time_exec = time.perf_counter()
         result_df = generate_data(
-            frequency=frequency, total_time=total_time, params=params
+            frequency=frequency, total_time=total_time, generate_data_params=params
         )
         end_time_exec = time.perf_counter()
         duration = end_time_exec - start_time_exec
@@ -259,3 +271,106 @@ class TestGenerateData:
             f"exceeding proportional threshold of {max_duration:.4f}s "
             f"(based on {max_seconds_per_1k_records * 1000:.3f} ms/1k records)"
         )
+
+
+class TestGenerateAnomalousData:
+    """Test accelerometer.generate_data() and the validity of the anomalous data produced"""
+
+    @pytest.mark.parametrize(
+        "z_amp_modifier, time_drift_offset, step_time_delay, step_frequency, expected_exception",
+        TEST_CASES["anomalousInvalidParameters"],
+    )
+    def test_invalid_inputs(
+        self,
+        z_amp_modifier: float,
+        time_drift_offset: float,
+        step_time_delay: float,
+        step_frequency: int,
+        expected_exception: type[ValidationError],
+    ):
+        """Test when invalid frequency or total time provided. Assume default parameters used"""
+        frequency = 50
+        time = 5
+        with pytest.raises(expected_exception) as exc_info:
+            anomalous_params = AnomalousDataModifierParams(
+                z_amp_modifier=z_amp_modifier,
+                time_drift_offset=time_drift_offset,
+                step_time_delay=step_time_delay,
+                step_frequency=step_frequency,
+            )
+            _ = generate_data(
+                frequency=frequency,
+                total_time=time,
+                generate_data_params=GenerateDataParams(),
+                anomalous_data_params=anomalous_params,
+            )
+        assert exc_info.type is ValidationError
+
+    def test_z_limp_modifier_quality(self):
+        """Test z_amp_modifier produces desired anomalous data assuming all others inputs constant"""
+        frequency = 50
+        time = 20
+
+        generate_data_params = GenerateDataParams(noise_std_dev=0)
+        anomalous_params = AnomalousDataModifierParams(
+            z_amp_modifier=0.4, step_frequency=4
+        )
+
+        normal_data = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+        )
+        anomalous_data = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+            anomalous_data_params=anomalous_params,
+        )
+
+        # Recreate limp_step_mask_vector
+        num_samples = int(frequency * time)
+        time_vector: npt.NDArray[np.float64] = np.linspace(
+            0.0, float(time), num_samples, endpoint=False, dtype=np.float64
+        )
+        step_indices = np.floor(time_vector * generate_data_params.gait_frequency)
+        limp_step_mask_vector: npt.NDArray[np.bool] = (
+            step_indices % anomalous_params.step_frequency
+        ) == (anomalous_params.step_frequency - 1)
+        # Assess whether the right samples corresponding with the "limp" step are affected
+        limp_samples = anomalous_data.loc[limp_step_mask_vector, "accel_z"]
+        normal_samples = anomalous_data.loc[~limp_step_mask_vector, "accel_z"]
+        assert len(limp_samples) > 0
+        assert len(normal_samples) > len(limp_samples)
+        assert limp_samples.std() < normal_samples.std()
+
+        # Assess data distribution is properly affected
+        normal_z_std = normal_data["accel_z"].std()
+        anomalous_z_std = anomalous_data["accel_z"].std()
+
+        assert anomalous_z_std < normal_z_std
+
+        assert normal_data["accel_x"].std() == pytest.approx(
+            anomalous_data["accel_x"].std(), rel=0.01
+        )
+        assert normal_data["accel_y"].std() == pytest.approx(
+            anomalous_data["accel_y"].std(), rel=0.01
+        )
+
+    def test_time_offset_modifier_quality(self):
+        """Test time_drift_offset produces desired anomalous data assuming all others inputs constant"""
+        frequency = 50
+        time = 20
+        pass
+
+    def test_step_delay_modifier_quality(self):
+        """Test step_time_delay produces desired anomalous data assuming all others inputs constant"""
+        frequency = 50
+        time = 20
+        pass
+
+    def test_step_frequency_modifier_quality(self):
+        """Test ste_frequency produces the desired anomalous data frequency assuming all other inputs are constant"""
+        frequency = 50
+        time = 20
+        pass
