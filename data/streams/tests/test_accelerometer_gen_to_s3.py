@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from writers.s3_writer import S3Writer
 from streams.pipe_accelerometer_to_s3 import run_pipeline, PipelineConfigs
-from generators.accelerometer import AccelerometerData, GenerateDataParams
+from generators.models import GenerateDataParams, AccelerometerData
 
 import pandas as pd
 import pytest

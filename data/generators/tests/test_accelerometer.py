@@ -1,9 +1,7 @@
 from uuid import UUID
-from generators.accelerometer import (
-    AnomalousDataModifierParams,
-    GenerateDataParams,
-    generate_data,
-)
+from generators.accelerometer import generate_data
+from generators.models import AnomalousDataModifierParams, GenerateDataParams
+
 
 import time
 from datetime import datetime, timezone
