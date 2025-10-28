@@ -6,7 +6,7 @@ from generators.accelerometer import (
 )
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 import numpy as np
@@ -173,7 +173,7 @@ class TestGenerateData:
         result_df = generate_data(
             frequency=frequency,
             total_time=time,
-            start_time=datetime.now(),
+            start_time=datetime.now(timezone.utc),
             generate_data_params=params,
         )
 
@@ -215,7 +215,7 @@ class TestGenerateData:
 
     def test_data_timestamps(self):
         """Test if the timestamps produce are distributed correctly per frequency and total time"""
-        start_ts = datetime.now()
+        start_ts = datetime.now(timezone.utc)
         frequency = 50
         time = 5
         expected_samples = frequency * time
