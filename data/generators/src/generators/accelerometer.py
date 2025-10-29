@@ -3,58 +3,85 @@ Module for generating mock accelerometer data
 """
 
 from datetime import datetime, timezone
-from typing import TypedDict
+import logging
 from uuid import uuid4
-
 
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
 from scipy.spatial.transform import Rotation as R
-from pydantic import UUID4, PositiveFloat, PositiveInt, validate_call
-from pydantic.dataclasses import dataclass
+from pydantic import PositiveFloat, PositiveInt, validate_call
+
+from .models import AnomalousDataModifierParams, GenerateDataParams
+
+logger = logging.getLogger(__name__)
 
 
-class AccelerometerData(TypedDict):
-    """Data model for accelerometer time series data"""
+def apply_time_anomalies(
+    time_vector: npt.NDArray[np.float64],
+    gait_frequency: float,
+    anomalous_data_params: AnomalousDataModifierParams | None,
+) -> npt.NDArray[np.float64]:
+    """Function to apply time-related anomalous modifiers to the generated data"""
+    if not anomalous_data_params:
+        return time_vector
 
-    timestamp: datetime
-    sensor_id: UUID4
-    accel_x: float
-    accel_y: float
-    accel_z: float
+    logger.info("Applying time-based anomalies...")
+    modified_time_vector: npt.NDArray[np.float64] = time_vector.copy()
+
+    # Apply cumulative time drift
+    if (
+        anomalous_data_params.time_drift_offset
+        and anomalous_data_params.time_drift_offset > 0
+    ):
+        drift = (
+            np.arange(len(modified_time_vector))
+            * anomalous_data_params.time_drift_offset
+        )
+        modified_time_vector += drift
+        logger.debug("Applied time drift.")
+
+    # Apply intermittent step delay
+    if (
+        anomalous_data_params.step_time_delay
+        and anomalous_data_params.step_time_delay > 0
+    ):
+        step_indices = np.floor(time_vector * gait_frequency)
+        delayed_step_mask_vector: npt.NDArray[np.bool] = (
+            step_indices % anomalous_data_params.step_frequency
+        ) == (anomalous_data_params.step_frequency - 1)
+        delay_to_add: npt.NDArray[np.float64] = np.where(
+            delayed_step_mask_vector, anomalous_data_params.step_time_delay, 0.0
+        )
+        modified_time_vector += delay_to_add
+        logger.debug("Applied intermittent step delay.")
+
+    return modified_time_vector
 
 
-@dataclass
-class GenerateDataParams:
-    """Data model for accelerometer-specific arguments for generating data"""
+def apply_amplitude_anomalies(
+    base_amplitude: float,
+    time_vector: npt.NDArray[np.float64],
+    gait_frequency: float,
+    anomalous_data_params: AnomalousDataModifierParams | None,
+) -> npt.NDArray[np.float64] | float:
+    """
+    Function to apply amplitude-related anomalous modifiers to the generated data.
+    """
+    # Modify Z-axis amplitude if applicable
+    if not anomalous_data_params or not anomalous_data_params.z_amp_modifier:
+        # return scalar if no modification to apply
+        return base_amplitude
 
-    # Motion Parameters -
-    gait_frequency: float = 2.0  # steps/sec
-    speed: float = 1.0  # m/s
-    base_height: float = 0.5  # meters
+    logger.info("Applying amplitude-based anomalies")
 
-    # Oscillation Amplitudes
-    amplitude_sway: float = 0.05  # meters
-    amplitude_bounce: float = 0.02  # meters
-    amplitude_roll: float = 0.05  # radians
-    amplitude_pitch: float = 0.05  # radians
+    modified_amplitude = base_amplitude * anomalous_data_params.z_amp_modifier
+    step_indices = np.floor(time_vector * gait_frequency)
+    limp_step_mask_vector: npt.NDArray[np.bool] = (
+        step_indices % anomalous_data_params.step_frequency
+    ) == (anomalous_data_params.step_frequency - 1)
 
-    # Base Orientation - Adjusts oscillation starting points
-    base_pitch: float = 0.0  # radians
-    base_roll: float = 0.03  # radians
-
-    # Phase Shifts - Adjusts oscillation timings
-    phase_sway: float = 0.0  # radians
-    phase_bounce: float = np.pi / 2  # radians
-    phase_roll: float = np.pi  # radians
-    phase_pitch: float = 0.0  # radians
-
-    # Sensor Noise
-    noise_std_dev: float = 0.05  # m/s^2
-
-    # Physics
-    gravity: float = 9.81  # m/s^2
+    return np.where(limp_step_mask_vector, modified_amplitude, base_amplitude)
 
 
 # TODO: Future considerations: parallel processing, new fxn using generators to create a stream -- yield one record at a time or in specified batch sizes
@@ -64,7 +91,8 @@ def generate_data(
     frequency: PositiveInt | PositiveFloat,
     total_time: PositiveInt | PositiveFloat,
     start_time: datetime | None = None,
-    params: GenerateDataParams | None = None,
+    generate_data_params: GenerateDataParams | None = None,
+    anomalous_data_params: AnomalousDataModifierParams | None = None,
 ) -> pd.DataFrame:
     """Generates simulated accelerometer data
 
@@ -79,16 +107,16 @@ def generate_data(
     :param params: Parameters specific to generating accelerometer data such as sway, bounce, roll, and pitch parameters.
     :returns: Returns a pandas DataFrame containing x,y,z acceleration values along with a sensor ID and timestamp
     """
-    if not params:
-        params = GenerateDataParams()
+    if not generate_data_params:
+        generate_data_params = GenerateDataParams()
 
     # Determine total number of samples/records to generate
     num_samples: int = int(frequency * total_time)
     if num_samples <= 0:
         return pd.DataFrame()
 
-    # Calculate constants
-    gravity_vector = np.array([0, 0, -params.gravity])
+    # Constants
+    gravity_vector = np.array([0, 0, -generate_data_params.gravity])
     sensor_id = uuid4()
     start_ts = start_time if start_time else datetime.now(timezone.utc)
 
@@ -97,15 +125,23 @@ def generate_data(
         0.0, float(total_time), num_samples, endpoint=False, dtype=np.float64
     )
 
+    time_vector = apply_time_anomalies(
+        time_vector, generate_data_params.gait_frequency, anomalous_data_params
+    )
+
     # Calculate robot body orientation given by Euler angles (radians) over time assuming SHM
     # Convert gait_frequency to angular frequency (ω) of SHM
-    omega_gait = 2 * np.pi * params.gait_frequency
+    omega_gait = 2 * np.pi * generate_data_params.gait_frequency
 
-    roll = params.base_roll + params.amplitude_roll * np.sin(
-        omega_gait * time_vector + params.phase_roll
+    roll = (
+        generate_data_params.base_roll
+        + generate_data_params.amplitude_roll
+        * np.sin(omega_gait * time_vector + generate_data_params.phase_roll)
     )
-    pitch = params.base_pitch + params.amplitude_pitch * np.sin(
-        omega_gait * time_vector + params.phase_pitch
+    pitch = (
+        generate_data_params.base_pitch
+        + generate_data_params.amplitude_pitch
+        * np.sin(omega_gait * time_vector + generate_data_params.phase_pitch)
     )
     yaw = np.zeros_like(
         time_vector
@@ -119,7 +155,7 @@ def generate_data(
     )  # Transpose to be able to go from World frame TO body frame
 
     # How often the body sways and bounces. Often relative to gait
-    omega_sway = 2 * np.pi * (params.gait_frequency / 2)
+    omega_sway = 2 * np.pi * (generate_data_params.gait_frequency / 2)
     omega_bounce = omega_gait
 
     # For reference: The formulas for calculating x,y,z position at time t
@@ -133,14 +169,21 @@ def generate_data(
     # d^2(A*sin(ω*t + p))dt^2 = -A*ω^2*sin(ω*t + p)
     accel_x = np.zeros_like(time_vector)  # speed is constant
     accel_y = (
-        -params.amplitude_sway
+        -generate_data_params.amplitude_sway
         * (omega_sway**2)
-        * np.sin(omega_sway * time_vector + params.phase_sway)
+        * np.sin(omega_sway * time_vector + generate_data_params.phase_sway)
+    )
+
+    amplitude_z: npt.NDArray[np.float64] | float = apply_amplitude_anomalies(
+        generate_data_params.amplitude_bounce,
+        time_vector,
+        generate_data_params.gait_frequency,
+        anomalous_data_params,
     )
     accel_z = (
-        -params.amplitude_bounce
+        -amplitude_z
         * (omega_bounce**2)
-        * np.sin(omega_bounce * time_vector + params.phase_bounce)
+        * np.sin(omega_bounce * time_vector + generate_data_params.phase_bounce)
     )
 
     a_linear_world = np.stack([accel_x, accel_y, accel_z], axis=-1)
@@ -149,15 +192,17 @@ def generate_data(
     # For reference: a_prop = R_world_to_body @ (a_linear_world - gravity_vector)
     # Using Einstein Summation method instead
     accel_diff_world = a_linear_world - gravity_vector
-    a_prop: npt.NDArray[np.float64] = np.einsum(
+    a_proper: npt.NDArray[np.float64] = np.einsum(
         "nij, nj->ni", R_world_to_body, accel_diff_world
     )
 
     # Add sensor noise
-    noise = np.random.normal(0, params.noise_std_dev, size=(num_samples, 3))
+    noise = np.random.normal(
+        0, generate_data_params.noise_std_dev, size=(num_samples, 3)
+    )
 
     # Calculate final acceleration matrix
-    a_final = a_prop + noise
+    a_final = a_proper + noise
 
     # Generate timestamps
     start_ts_np = np.datetime64(start_ts, "ns")
