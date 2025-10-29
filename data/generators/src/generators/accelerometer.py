@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 import logging
 from uuid import uuid4
 
-
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
@@ -193,7 +192,7 @@ def generate_data(
     # For reference: a_prop = R_world_to_body @ (a_linear_world - gravity_vector)
     # Using Einstein Summation method instead
     accel_diff_world = a_linear_world - gravity_vector
-    a_prop: npt.NDArray[np.float64] = np.einsum(
+    a_proper: npt.NDArray[np.float64] = np.einsum(
         "nij, nj->ni", R_world_to_body, accel_diff_world
     )
 
@@ -203,7 +202,7 @@ def generate_data(
     )
 
     # Calculate final acceleration matrix
-    a_final = a_prop + noise
+    a_final = a_proper + noise
 
     # Generate timestamps
     start_ts_np = np.datetime64(start_ts, "ns")
