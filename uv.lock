@@ -566,7 +566,7 @@ wheels = [
 
 [[package]]
 name = "generators"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "data/generators" }
 dependencies = [
     { name = "numpy" },
@@ -2063,7 +2063,7 @@ wheels = [
 
 [[package]]
 name = "sensor-data-sim"
-version = "0.2.0"
+version = "0.3.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -2261,7 +2261,7 @@ wheels = [
 
 [[package]]
 name = "streams"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "data/streams" }
 dependencies = [
     { name = "generators" },
@@ -2479,7 +2479,7 @@ wheels = [
 
 [[package]]
 name = "writers"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "data/writers" }
 dependencies = [
     { name = "boto3" },
