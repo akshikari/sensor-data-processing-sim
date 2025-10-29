@@ -2,7 +2,6 @@ from uuid import UUID
 from generators.accelerometer import generate_data
 from generators.models import AnomalousDataModifierParams, GenerateDataParams
 
-
 import time
 from datetime import datetime, timezone
 
@@ -37,17 +36,21 @@ TEST_CASES = {
         pytest.param(1000, 100, 100_000, id="100k_samples"),  # 100k samples
         pytest.param(
             1000, 1000, 1_000_000, id="1M_samples", marks=pytest.mark.veryslow
-        ),  # 1 million samples
+        ),
     ],
     "anomalousInvalidParameters": [
         pytest.param(
             None, None, None, None, ValidationError, id="anomaly_null_input_params"
         ),
         pytest.param(0.0, 0.0, 0.0, 0.0, ValidationError, id="all_zeroes"),
-        pytest.param(10.0, -3.0, 2.0, 4, ValidationError, id="all_zeroes"),
-        pytest.param(-10.0, 3.0, 2.0, 4, ValidationError, id="all_zeroes"),
-        pytest.param(10.0, 3.0, -2.0, 4, ValidationError, id="all_zeroes"),
-        pytest.param(10.0, 3.0, 2.0, -4, ValidationError, id="all_zeroes"),
+        pytest.param(-10.0, 3.0, 2.0, 4, ValidationError, id="negative_z_amp_modifier"),
+        pytest.param(
+            10.0, -3.0, 2.0, 4, ValidationError, id="negative_time_drift_offset"
+        ),
+        pytest.param(
+            10.0, 3.0, -2.0, 4, ValidationError, id="negative_step_time_delay"
+        ),
+        pytest.param(10.0, 3.0, 2.0, -4, ValidationError, id="negative_step_frequency"),
     ],
 }
 
@@ -136,7 +139,6 @@ class TestGenerateData:
         )
         assert len(result_df) == expected_samples
 
-        # Calculate expected constant vector
         base_euler = [b_roll, b_pitch, 0.0]
         R_static = R.from_euler("xyz", base_euler, degrees=False).as_matrix()
         R_static = R_static.T
@@ -177,7 +179,6 @@ class TestGenerateData:
 
         assert len(result_df) == expected_samples
 
-        # Calculate expected mean vector
         base_euler = [b_roll, b_pitch, 0.0]
         R_static = R.from_euler("xyz", base_euler, degrees=False).as_matrix()
         R_world_to_body = R_static.T
@@ -185,7 +186,6 @@ class TestGenerateData:
         expected_vector = R_world_to_body @ (-g_vector)
         expected_x, expected_y, expected_z = expected_vector
 
-        # Check Mean (use higher tolerance for random sample mean)
         mean_tolerance = (
             test_noise_std_dev / np.sqrt(expected_samples) * 5
         )  # e.g., 5 sigma error
@@ -199,7 +199,6 @@ class TestGenerateData:
             expected_z, abs=mean_tolerance
         )
 
-        # Check Standard Deviation (use relative tolerance)
         std_rel_tolerance = 0.20  # Allow 20% deviation for sample std dev
         assert np.std(result_df["accel_x"]) == pytest.approx(
             test_noise_std_dev, rel=std_rel_tolerance
@@ -326,7 +325,6 @@ class TestGenerateAnomalousData:
             anomalous_data_params=anomalous_params,
         )
 
-        # Recreate limp_step_mask_vector
         num_samples = int(frequency * time)
         time_vector: npt.NDArray[np.float64] = np.linspace(
             0.0, float(time), num_samples, endpoint=False, dtype=np.float64
@@ -336,14 +334,12 @@ class TestGenerateAnomalousData:
             step_indices % anomalous_params.step_frequency
         ) == (anomalous_params.step_frequency - 1)
 
-        # Assess whether the right samples corresponding with the "limp" step are affected
         limp_samples = anomalous_data.loc[limp_step_mask_vector, "accel_z"]
         normal_samples = anomalous_data.loc[~limp_step_mask_vector, "accel_z"]
         assert len(limp_samples) > 0
         assert len(normal_samples) > len(limp_samples)
         assert limp_samples.std() < normal_samples.std()
 
-        # Assess data distribution is properly affected
         normal_z_std = normal_data["accel_z"].std()
         anomalous_z_std = anomalous_data["accel_z"].std()
         assert anomalous_z_std < normal_z_std
@@ -358,16 +354,165 @@ class TestGenerateAnomalousData:
         """Test time_drift_offset produces desired anomalous data assuming all others inputs constant"""
         frequency = 50
         time = 20
-        pass
+        time_drift = 0.001  # 1ms drift per sample
+
+        generate_data_params = GenerateDataParams(noise_std_dev=0)
+        anomalous_params = AnomalousDataModifierParams(time_drift_offset=time_drift)
+
+        normal_data = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+        )
+        anomalous_data = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+            anomalous_data_params=anomalous_params,
+        )
+
+        num_samples = len(anomalous_data)
+        expected_drift = np.arange(num_samples) * time_drift
+
+        normal_time_diff = (
+            (normal_data["timestamp"] - normal_data["timestamp"].iloc[0])
+            .dt.total_seconds()
+            .values
+        )
+        anomalous_time_diff = (
+            (anomalous_data["timestamp"] - anomalous_data["timestamp"].iloc[0])
+            .dt.total_seconds()
+            .values
+        )
+
+        actual_drift = anomalous_time_diff - normal_time_diff
+        assert np.allclose(actual_drift, expected_drift, atol=1e-9)
+
+        assert actual_drift[0] == 0.0
+        assert actual_drift[-1] == pytest.approx(
+            (num_samples - 1) * time_drift, abs=1e-9
+        )
+        assert np.all(np.diff(actual_drift) >= 0)  # Drift is monotonically increasing
+
+        assert not np.allclose(normal_data["accel_x"], anomalous_data["accel_x"])
+        assert not np.allclose(normal_data["accel_y"], anomalous_data["accel_y"])
+        assert not np.allclose(normal_data["accel_z"], anomalous_data["accel_z"])
 
     def test_step_delay_modifier_quality(self):
         """Test step_time_delay produces desired anomalous data assuming all others inputs constant"""
         frequency = 50
         time = 20
-        pass
+        step_delay = 0.05  # 50ms delay per affected step
+
+        generate_data_params = GenerateDataParams(noise_std_dev=0)
+        anomalous_params = AnomalousDataModifierParams(
+            step_time_delay=step_delay, step_frequency=4
+        )
+
+        normal_data = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+        )
+        anomalous_data = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+            anomalous_data_params=anomalous_params,
+        )
+
+        num_samples = int(frequency * time)
+        time_vector: npt.NDArray[np.float64] = np.linspace(
+            0.0, float(time), num_samples, endpoint=False, dtype=np.float64
+        )
+        step_indices = np.floor(time_vector * generate_data_params.gait_frequency)
+        delayed_step_mask_vector: npt.NDArray[np.bool] = (
+            step_indices % anomalous_params.step_frequency
+        ) == (anomalous_params.step_frequency - 1)
+
+        normal_time_diff = (
+            (normal_data["timestamp"] - normal_data["timestamp"].iloc[0])
+            .dt.total_seconds()
+            .values
+        )
+        anomalous_time_diff = (
+            (anomalous_data["timestamp"] - anomalous_data["timestamp"].iloc[0])
+            .dt.total_seconds()
+            .values
+        )
+
+        actual_delays = anomalous_time_diff - normal_time_diff
+
+        delayed_samples = actual_delays[delayed_step_mask_vector]
+        normal_samples = actual_delays[~delayed_step_mask_vector]
+
+        assert len(delayed_samples) > 0
+        assert len(normal_samples) > len(delayed_samples)
+        assert np.allclose(delayed_samples, step_delay, atol=1e-9)
+        assert np.allclose(normal_samples, 0.0, atol=1e-9)
+
+        assert not np.allclose(normal_data["accel_x"], anomalous_data["accel_x"])
+        assert not np.allclose(normal_data["accel_y"], anomalous_data["accel_y"])
+        assert not np.allclose(normal_data["accel_z"], anomalous_data["accel_z"])
 
     def test_step_frequency_modifier_quality(self):
-        """Test ste_frequency produces the desired anomalous data frequency assuming all other inputs are constant"""
+        """Test step_frequency produces the desired anomalous data frequency assuming all other inputs are constant"""
         frequency = 50
         time = 20
-        pass
+
+        generate_data_params = GenerateDataParams(noise_std_dev=0)
+
+        anomalous_params_2 = AnomalousDataModifierParams(
+            z_amp_modifier=0.5, step_frequency=2
+        )
+        anomalous_data_2 = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+            anomalous_data_params=anomalous_params_2,
+        )
+
+        anomalous_params_3 = AnomalousDataModifierParams(
+            z_amp_modifier=0.5, step_frequency=3
+        )
+        anomalous_data_3 = generate_data(
+            frequency=frequency,
+            total_time=time,
+            generate_data_params=generate_data_params,
+            anomalous_data_params=anomalous_params_3,
+        )
+
+        num_samples = int(frequency * time)
+        time_vector: npt.NDArray[np.float64] = np.linspace(
+            0.0, float(time), num_samples, endpoint=False, dtype=np.float64
+        )
+        step_indices = np.floor(time_vector * generate_data_params.gait_frequency)
+
+        mask_2: npt.NDArray[np.bool] = (step_indices % 2) == (2 - 1)
+        mask_3: npt.NDArray[np.bool] = (step_indices % 3) == (3 - 1)
+
+        affected_count_2 = np.sum(mask_2)
+        affected_count_3 = np.sum(mask_3)
+
+        assert affected_count_2 > 0
+        assert affected_count_3 > 0
+        assert affected_count_2 != affected_count_3
+        assert affected_count_2 > affected_count_3
+
+        z_std_2 = anomalous_data_2["accel_z"].std()
+        z_std_3 = anomalous_data_3["accel_z"].std()
+
+        assert z_std_2 < z_std_3
+
+        accel_mag_2 = np.sqrt(
+            anomalous_data_2["accel_x"] ** 2
+            + anomalous_data_2["accel_y"] ** 2
+            + anomalous_data_2["accel_z"] ** 2
+        )
+        accel_mag_3 = np.sqrt(
+            anomalous_data_3["accel_x"] ** 2
+            + anomalous_data_3["accel_y"] ** 2
+            + anomalous_data_3["accel_z"] ** 2
+        )
+
+        assert accel_mag_2.std() != pytest.approx(accel_mag_3.std(), rel=0.01)
