@@ -9,10 +9,8 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from generators.accelerometer import (
-    GenerateDataParams,
-    generate_data,
-)
+from generators.accelerometer.models import GenerateDataParams
+from generators.accelerometer._old_generator import generate_data
 from writers import S3Writer
 
 logging.basicConfig(
@@ -63,7 +61,7 @@ def run_pipeline(configs: PipelineConfigs) -> bool:
             frequency=frequency,
             total_time=total_time,
             start_time=start_ts,
-            params=source_params,
+            generate_data_params=source_params,
         )
         if data_df.empty:
             logging.warning("No data generated")
