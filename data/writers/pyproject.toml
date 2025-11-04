@@ -1,6 +1,6 @@
 [project]
 name = "writers"
-version = "0.3.0"
+version = "0.4.0"
 description = "Package containing writers that take data and write to a specified destination"
 readme = "README.md"
 requires-python = ">=3.12"
