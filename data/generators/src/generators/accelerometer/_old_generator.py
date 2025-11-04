@@ -116,7 +116,7 @@ def generate_data(
         return pd.DataFrame()
 
     # Constants
-    gravity_vector = np.array([0, 0, -generate_data_params.gravity])
+    gravity_vector = np.array([0, 0, -generate_data_params.gravity_mps2])
     sensor_id = uuid4()
     start_ts = start_time if start_time else datetime.now(timezone.utc)
 
@@ -126,22 +126,22 @@ def generate_data(
     )
 
     time_vector = apply_time_anomalies(
-        time_vector, generate_data_params.gait_frequency, anomalous_data_params
+        time_vector, generate_data_params.gait_frequency_hz, anomalous_data_params
     )
 
     # Calculate robot body orientation given by Euler angles (radians) over time assuming SHM
     # Convert gait_frequency to angular frequency (ω) of SHM
-    omega_gait = 2 * np.pi * generate_data_params.gait_frequency
+    omega_gait = 2 * np.pi * generate_data_params.gait_frequency_hz
 
     roll = (
-        generate_data_params.base_roll
-        + generate_data_params.amplitude_roll
-        * np.sin(omega_gait * time_vector + generate_data_params.phase_roll)
+        generate_data_params.base_roll_rad
+        + generate_data_params.amplitude_roll_rad
+        * np.sin(omega_gait * time_vector + generate_data_params.phase_roll_rad)
     )
     pitch = (
-        generate_data_params.base_pitch
-        + generate_data_params.amplitude_pitch
-        * np.sin(omega_gait * time_vector + generate_data_params.phase_pitch)
+        generate_data_params.base_pitch_rad
+        + generate_data_params.amplitude_pitch_rad
+        * np.sin(omega_gait * time_vector + generate_data_params.phase_pitch_rad)
     )
     yaw = np.zeros_like(
         time_vector
@@ -149,13 +149,13 @@ def generate_data(
 
     # Calculate Rotation Matrices (Robot body frame TO World frame)
     euler_orientations = np.stack([roll, pitch, yaw], axis=-1)
-    R_body_world = R.from_euler("xyz", euler_orientations, degrees=False).as_matrix()
-    R_world_to_body = R_body_world.transpose(
+    R_body_to_world = R.from_euler("xyz", euler_orientations, degrees=False).as_matrix()
+    R_world_to_body = R_body_to_world.transpose(
         (0, 2, 1)
     )  # Transpose to be able to go from World frame TO body frame
 
     # How often the body sways and bounces. Often relative to gait
-    omega_sway = 2 * np.pi * (generate_data_params.gait_frequency / 2)
+    omega_sway = 2 * np.pi * (generate_data_params.gait_frequency_hz / 2)
     omega_bounce = omega_gait
 
     # For reference: The formulas for calculating x,y,z position at time t
@@ -169,21 +169,21 @@ def generate_data(
     # d^2(A*sin(ω*t + p))dt^2 = -A*ω^2*sin(ω*t + p)
     accel_x = np.zeros_like(time_vector)  # speed is constant
     accel_y = (
-        -generate_data_params.amplitude_sway
+        -generate_data_params.amplitude_sway_m
         * (omega_sway**2)
-        * np.sin(omega_sway * time_vector + generate_data_params.phase_sway)
+        * np.sin(omega_sway * time_vector + generate_data_params.phase_sway_rad)
     )
 
     amplitude_z: npt.NDArray[np.float64] | float = apply_amplitude_anomalies(
-        generate_data_params.amplitude_bounce,
+        generate_data_params.amplitude_bounce_m,
         time_vector,
-        generate_data_params.gait_frequency,
+        generate_data_params.gait_frequency_hz,
         anomalous_data_params,
     )
     accel_z = (
         -amplitude_z
         * (omega_bounce**2)
-        * np.sin(omega_bounce * time_vector + generate_data_params.phase_bounce)
+        * np.sin(omega_bounce * time_vector + generate_data_params.phase_bounce_rad)
     )
 
     a_linear_world = np.stack([accel_x, accel_y, accel_z], axis=-1)

@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from writers.s3_writer import S3Writer
 from streams.pipe_accelerometer_to_s3 import run_pipeline, PipelineConfigs
-from generators.models import GenerateDataParams, AccelerometerData
+from generators.accelerometer.models import GenerateDataParams, AccelerometerData
 
 import pandas as pd
 import pytest
@@ -110,7 +110,7 @@ class TestRunPipeline:
         _, call_kwargs = mock_dependencies["generate_data"].call_args
         assert call_kwargs.get("frequency") == 10
         assert call_kwargs.get("total_time") == 1
-        assert isinstance(call_kwargs.get("params"), GenerateDataParams)
+        assert isinstance(call_kwargs.get("generate_data_params"), GenerateDataParams)
 
         mock_dependencies["S3Writer"].assert_called_once_with(
             bucket_name=TEST_BUCKET,

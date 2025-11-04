@@ -1,6 +1,9 @@
 from uuid import UUID
-from generators.accelerometer import generate_data
-from generators.models import AnomalousDataModifierParams, GenerateDataParams
+from generators.accelerometer._old_generator import generate_data
+from generators.accelerometer.models import (
+    AnomalousDataModifierParams,
+    GenerateDataParams,
+)
 
 import time
 from datetime import datetime, timezone
@@ -12,6 +15,8 @@ import numpy.typing as npt
 from scipy.spatial.transform import Rotation as R
 from pydantic import ValidationError
 
+
+pytestmark = pytest.mark.old_generator
 
 TEST_CASES = {
     "invalidInputs": [
@@ -39,18 +44,12 @@ TEST_CASES = {
         ),
     ],
     "anomalousInvalidParameters": [
-        pytest.param(
-            None, None, None, None, ValidationError, id="anomaly_null_input_params"
-        ),
-        pytest.param(0.0, 0.0, 0.0, 0.0, ValidationError, id="all_zeroes"),
-        pytest.param(-10.0, 3.0, 2.0, 4, ValidationError, id="negative_z_amp_modifier"),
-        pytest.param(
-            10.0, -3.0, 2.0, 4, ValidationError, id="negative_time_drift_offset"
-        ),
-        pytest.param(
-            10.0, 3.0, -2.0, 4, ValidationError, id="negative_step_time_delay"
-        ),
-        pytest.param(10.0, 3.0, 2.0, -4, ValidationError, id="negative_step_frequency"),
+        pytest.param(None, None, None, None, TypeError, id="anomaly_null_input_params"),
+        pytest.param(0.0, 0.0, 0.0, 0.0, ValueError, id="all_zeroes"),
+        pytest.param(-10.0, 3.0, 2.0, 4, ValueError, id="negative_z_amp_modifier"),
+        pytest.param(10.0, -3.0, 2.0, 4, ValueError, id="negative_time_drift_offset"),
+        pytest.param(10.0, 3.0, -2.0, 4, ValueError, id="negative_step_time_delay"),
+        pytest.param(10.0, 3.0, 2.0, -4, ValueError, id="negative_step_frequency"),
     ],
 }
 
@@ -124,14 +123,13 @@ class TestGenerateData:
         expected_samples = frequency * time
 
         params = GenerateDataParams(
-            speed=0.0,
-            amplitude_bounce=0.0,
-            amplitude_pitch=0.0,
-            amplitude_roll=0.0,
-            amplitude_sway=0.0,
+            amplitude_bounce_m=0.0,
+            amplitude_pitch_rad=0.0,
+            amplitude_roll_rad=0.0,
+            amplitude_sway_m=0.0,
             noise_std_dev=0.0,
-            base_roll=b_roll,
-            base_pitch=b_pitch,
+            base_roll_rad=b_roll,
+            base_pitch_rad=b_pitch,
         )
 
         result_df: pd.DataFrame = generate_data(
@@ -142,7 +140,7 @@ class TestGenerateData:
         base_euler = [b_roll, b_pitch, 0.0]
         R_static = R.from_euler("xyz", base_euler, degrees=False).as_matrix()
         R_static = R_static.T
-        gravity_vector = np.array([0, 0, -params.gravity])
+        gravity_vector = np.array([0, 0, -params.gravity_mps2])
         expected_vector: npt.NDArray[np.float64] = R_static @ (-gravity_vector)
         expected_x: float = expected_vector[0]
         expected_y: float = expected_vector[1]
@@ -161,13 +159,12 @@ class TestGenerateData:
         time = 20
         expected_samples = frequency * time
         params = GenerateDataParams(
-            speed=0.0,
-            amplitude_bounce=0.0,
-            amplitude_pitch=0.0,
-            amplitude_roll=0.0,
-            amplitude_sway=0.0,
-            base_roll=b_roll,
-            base_pitch=b_pitch,
+            amplitude_bounce_m=0.0,
+            amplitude_pitch_rad=0.0,
+            amplitude_roll_rad=0.0,
+            amplitude_sway_m=0.0,
+            base_roll_rad=b_roll,
+            base_pitch_rad=b_pitch,
             noise_std_dev=test_noise_std_dev,
         )
         result_df = generate_data(
@@ -182,7 +179,7 @@ class TestGenerateData:
         base_euler = [b_roll, b_pitch, 0.0]
         R_static = R.from_euler("xyz", base_euler, degrees=False).as_matrix()
         R_world_to_body = R_static.T
-        g_vector = np.array([0, 0, -params.gravity])
+        g_vector = np.array([0, 0, -params.gravity_mps2])
         expected_vector = R_world_to_body @ (-g_vector)
         expected_x, expected_y, expected_z = expected_vector
 
@@ -283,12 +280,12 @@ class TestGenerateAnomalousData:
         time_drift_offset: float,
         step_time_delay: float,
         step_frequency: int,
-        expected_exception: type[ValidationError],
+        expected_exception: type[ValueError | TypeError],
     ):
         """Test when invalid frequency or total time provided. Assume default parameters used"""
         frequency = 50
         time = 5
-        with pytest.raises(expected_exception) as exc_info:
+        with pytest.raises(expected_exception):
             anomalous_params = AnomalousDataModifierParams(
                 z_amp_modifier=z_amp_modifier,
                 time_drift_offset=time_drift_offset,
@@ -301,7 +298,6 @@ class TestGenerateAnomalousData:
                 generate_data_params=GenerateDataParams(),
                 anomalous_data_params=anomalous_params,
             )
-        assert exc_info.type is ValidationError
 
     def test_z_limp_modifier_quality(self):
         """Test z_amp_modifier produces desired anomalous data assuming all others inputs constant"""
@@ -329,7 +325,7 @@ class TestGenerateAnomalousData:
         time_vector: npt.NDArray[np.float64] = np.linspace(
             0.0, float(time), num_samples, endpoint=False, dtype=np.float64
         )
-        step_indices = np.floor(time_vector * generate_data_params.gait_frequency)
+        step_indices = np.floor(time_vector * generate_data_params.gait_frequency_hz)
         limp_step_mask_vector: npt.NDArray[np.bool] = (
             step_indices % anomalous_params.step_frequency
         ) == (anomalous_params.step_frequency - 1)
@@ -425,7 +421,7 @@ class TestGenerateAnomalousData:
         time_vector: npt.NDArray[np.float64] = np.linspace(
             0.0, float(time), num_samples, endpoint=False, dtype=np.float64
         )
-        step_indices = np.floor(time_vector * generate_data_params.gait_frequency)
+        step_indices = np.floor(time_vector * generate_data_params.gait_frequency_hz)
         delayed_step_mask_vector: npt.NDArray[np.bool] = (
             step_indices % anomalous_params.step_frequency
         ) == (anomalous_params.step_frequency - 1)
@@ -486,7 +482,7 @@ class TestGenerateAnomalousData:
         time_vector: npt.NDArray[np.float64] = np.linspace(
             0.0, float(time), num_samples, endpoint=False, dtype=np.float64
         )
-        step_indices = np.floor(time_vector * generate_data_params.gait_frequency)
+        step_indices = np.floor(time_vector * generate_data_params.gait_frequency_hz)
 
         mask_2: npt.NDArray[np.bool] = (step_indices % 2) == (2 - 1)
         mask_3: npt.NDArray[np.bool] = (step_indices % 3) == (3 - 1)
