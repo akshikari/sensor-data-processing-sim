@@ -7,7 +7,13 @@ requires-python = ">=3.12"
 dependencies = []
 
 [tool.uv.workspace]
-members = ["data/generators", "data/writers", "data/transformers", "data/streams"]
+members = [
+    "data/generators",
+    "data/writers",
+    "data/transformers",
+    "data/streams",
+    "data/services/sensor_sim_api",
+]
 
 [tool.pytest.ini_options]
 markers = [
@@ -41,6 +47,7 @@ docs = [
     "sphinx>=8.2.3",
 ]
 dev = [
+    "ipykernel>=6.29.5",
     "ipympl>=0.9.7",
     "jupyterlab>=4.4.1",
     "matplotlib>=3.10.1",
