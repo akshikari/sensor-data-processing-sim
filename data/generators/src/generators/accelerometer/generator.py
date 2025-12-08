@@ -325,7 +325,8 @@ class AccelerometerGenerator:
         """
 
         stream_params = self._prime_stream(start_time, data_frequency, rng_seed)
-        assert self.stream_state is not None
+        if self.stream_state is None:
+            raise AttributeError("stream_state was not properly initialized.")
 
         next_deadline = stream_params["start_mono"]
         while not self._stop:
@@ -385,7 +386,8 @@ class AccelerometerGenerator:
         :returns: Dictionary with structure specified by AcclerometerDataPoint class
         """
         stream_params = self._prime_stream(start_time, data_frequency, rng_seed)
-        assert self.stream_state is not None
+        if self.stream_state is None:
+            raise AttributeError("stream_state was not properly initialized.")
 
         next_deadline = stream_params["start_mono"]
         while not self._stop:
