@@ -6,12 +6,10 @@ as fast as python can do it for simplicity's sake.
 
 import asyncio
 from collections.abc import AsyncIterator, Iterator
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from itertools import islice
 import math
 import time
-from typing import TypedDict
 from uuid import UUID
 
 import numpy as np
@@ -22,50 +20,11 @@ from scipy.spatial.transform import Rotation
 from generators.accelerometer.models import (
     AnomalousDataModifierParams,
     GenerateDataParams,
+    AnomalyState,
+    StreamState,
+    StreamStartParameters,
+    AccelerometerDataPoint,
 )
-
-
-@dataclass
-class AnomalyState:
-    """State of persisted anomalous data such as time drift or step delay."""
-
-    cumulative_time_drift: float = 0.0
-    cumulative_step_delay: float = 0.0
-    last_step_idx_seen: int | None = None  # to apply step delay once per step-event
-
-
-@dataclass
-class StreamState:
-    """State of persisted stream metadata to maintain across generate data calls"""
-
-    sensor_id: UUID
-    start_ts_utc: datetime
-    start_mono: float  # monotonic reference (seconds)
-    anomaly_state: AnomalyState
-    sample_index: int = 0
-
-
-class AccelerometerDataPoint(TypedDict):
-    """Model for single accelerometer data point"""
-
-    timestamp: datetime
-    sensor_id: UUID
-    accel_x: float
-    accel_y: float
-    accel_z: float
-    sequence: int
-
-
-class StreamStartParameters(TypedDict):
-    """Model for starting stream parameters returned by AccelerometerGenerator._prime_stream method."""
-
-    start_mono: float
-    rng: np.random.Generator
-    period: float
-    gravity_world: npt.NDArray[np.float64]
-    omega_gait: float
-    omega_sway: float
-    omega_bounce: float
 
 
 class AccelerometerGenerator:
