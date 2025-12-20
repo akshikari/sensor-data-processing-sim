@@ -12,7 +12,7 @@ class AccelerometerData(TypedDict):
     """Data model for accelerometer time series data"""
 
     timestamp: datetime
-    sensor_id: UUID
+    id: UUID
     accel_x: float
     accel_y: float
     accel_z: float
@@ -120,7 +120,7 @@ class AnomalyState:
 class StreamState:
     """State of persisted stream metadata to maintain across generate data calls"""
 
-    sensor_id: UUID
+    id: UUID
     start_ts_utc: datetime
     start_mono: float  # monotonic reference (seconds)
     anomaly_state: AnomalyState
@@ -131,7 +131,7 @@ class AccelerometerDataPoint(TypedDict):
     """Model for single accelerometer data point"""
 
     timestamp: datetime
-    sensor_id: UUID
+    id: UUID
     accel_x: float
     accel_y: float
     accel_z: float

@@ -34,13 +34,13 @@ class AccelerometerGenerator:
 
     def __init__(
         self,
-        sensor_id: UUID,
+        id: UUID,
         generate_data_params: GenerateDataParams | None = None,
         anomaly_data_params: AnomalousDataModifierParams | None = None,
         anomaly_state: AnomalyState | None = None,
         stream_state: StreamState | None = None,
     ):
-        self.sensor_id: UUID = sensor_id
+        self.id: UUID = id
         self.sensor_type_id: str = "accelerometer"  # Soon(TM)
         self.anomaly_state: AnomalyState = (
             anomaly_state if anomaly_state else AnomalyState()
@@ -239,7 +239,7 @@ class AccelerometerGenerator:
         period = 1.0 / data_frequency
         if self.stream_state is None:
             self.stream_state = StreamState(
-                sensor_id=self.sensor_id,
+                id=self.id,
                 start_ts_utc=start_ts_utc,
                 start_mono=start_mono,
                 anomaly_state=AnomalyState(),
@@ -316,7 +316,7 @@ class AccelerometerGenerator:
 
             yield {
                 "timestamp": timestamp,
-                "sensor_id": self.stream_state.sensor_id,
+                "id": self.stream_state.id,
                 "accel_x": float(a_body[0]),
                 "accel_y": float(a_body[1]),
                 "accel_z": float(a_body[2]),
@@ -377,7 +377,7 @@ class AccelerometerGenerator:
 
             yield {
                 "timestamp": timestamp,
-                "sensor_id": self.stream_state.sensor_id,
+                "id": self.stream_state.id,
                 "accel_x": float(a_body[0]),
                 "accel_y": float(a_body[1]),
                 "accel_z": float(a_body[2]),
