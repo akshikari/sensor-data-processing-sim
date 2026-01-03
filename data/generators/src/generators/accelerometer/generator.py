@@ -102,18 +102,15 @@ class AccelerometerGenerator:
                     elapsed_time_sec * self.generate_data_params.gait_frequency_hz
                 )
             )
-            if self.anomaly_state.last_step_idx_seen is None:
-                self.anomaly_state.last_step_idx_seen = step_idx
 
-            if step_idx != self.anomaly_state.last_step_idx_seen:
-                prev = self.anomaly_state.last_step_idx_seen
-                if (prev % self.anomaly_data_params.step_frequency) == (
-                    self.anomaly_data_params.step_frequency - 1
-                ):
-                    self.anomaly_state.cumulative_step_delay += (
-                        self.anomaly_data_params.step_time_delay
-                    )
-                self.anomaly_state.last_step_idx_seen = step_idx
+            num_anomalous_steps = (
+                step_idx + 1
+            ) // self.anomaly_data_params.step_frequency
+            self.anomaly_state.cumulative_step_delay = (
+                num_anomalous_steps * self.anomaly_data_params.step_time_delay
+            )
+
+            self.anomaly_state.last_step_idx_seen = step_idx
 
         return (
             elapsed_time_sec
@@ -235,13 +232,11 @@ class AccelerometerGenerator:
         if data_frequency <= 0:
             raise ValueError("data_frequency must be greather than 0")
         start_ts_utc = start_time or datetime.now(timezone.utc)
-        start_mono = time.monotonic()
         period = 1.0 / data_frequency
         if self.stream_state is None:
             self.stream_state = StreamState(
                 id=self.id,
                 start_ts_utc=start_ts_utc,
-                start_mono=start_mono,
                 anomaly_state=AnomalyState(),
                 sample_index=0,
             )
@@ -255,7 +250,6 @@ class AccelerometerGenerator:
         omega_bounce = omega_gait
 
         return {
-            "start_mono": start_mono,
             "rng": rng,
             "period": period,
             "gravity_world": gravity_world,
@@ -287,14 +281,32 @@ class AccelerometerGenerator:
         if self.stream_state is None:
             raise AttributeError("stream_state was not properly initialized.")
 
-        next_deadline = stream_params["start_mono"]
+        stream_start = self.stream_state.start_ts_utc
+
+        if real_time:
+            now = datetime.now(timezone.utc)
+            elapsed_real = (now - stream_start).total_seconds()
+            current_sample_index = int(elapsed_real / stream_params["period"])
+
+            # If resuming, start from current position (skipping missed samples)
+            if self.stream_state.sample_index < current_sample_index:
+                self.stream_state.sample_index = current_sample_index
+
+            # If resuming, start from current position (skipping missed samples)
+            if self.stream_state.sample_index < current_sample_index:
+                self.stream_state.sample_index = current_sample_index
+
+        next_sample_time = stream_start + timedelta(
+            seconds=self.stream_state.sample_index * stream_params["period"]
+        )
         while not self._stop:
             if real_time:
-                now = time.monotonic()
-                if now < next_deadline:
-                    time.sleep(next_deadline - now)
-                    now = time.monotonic()
-                t_real = time.monotonic() - self.stream_state.start_mono
+                now = datetime.now(timezone.utc)
+                if now < next_sample_time:
+                    sleep_duration = (next_sample_time - now).total_seconds()
+                    time.sleep(sleep_duration)
+                    now = datetime.now(timezone.utc)
+                t_real = (now - stream_start).total_seconds()
             else:
                 # In non-realtime mode, simulate proper time intervals based on sample rate
                 t_real = self.stream_state.sample_index * stream_params["period"]
@@ -312,7 +324,7 @@ class AccelerometerGenerator:
                 stream_params["rng"],
             )
 
-            timestamp = self.stream_state.start_ts_utc + timedelta(seconds=t_eff)
+            timestamp = stream_start + timedelta(seconds=t_eff)
 
             yield {
                 "timestamp": timestamp,
@@ -324,7 +336,7 @@ class AccelerometerGenerator:
             }
 
             self.stream_state.sample_index += 1
-            next_deadline += stream_params["period"]
+            next_sample_time += timedelta(seconds=stream_params["period"])
 
     async def async_generate_data_stream(
         self,
@@ -348,14 +360,32 @@ class AccelerometerGenerator:
         if self.stream_state is None:
             raise AttributeError("stream_state was not properly initialized.")
 
-        next_deadline = stream_params["start_mono"]
+        stream_start = self.stream_state.start_ts_utc
+
+        if real_time:
+            now = datetime.now(timezone.utc)
+            elapsed_real = (now - stream_start).total_seconds()
+            current_sample_index = int(elapsed_real / stream_params["period"])
+
+            # If resuming, start from current position (skipping missed samples)
+            if self.stream_state.sample_index < current_sample_index:
+                self.stream_state.sample_index = current_sample_index
+
+            # If resuming, start from current position (skipping missed samples)
+            if self.stream_state.sample_index < current_sample_index:
+                self.stream_state.sample_index = current_sample_index
+
+        next_sample_time = stream_start + timedelta(
+            seconds=self.stream_state.sample_index * stream_params["period"]
+        )
         while not self._stop:
             if real_time:
-                now = time.monotonic()
-                if now < next_deadline:
-                    await asyncio.sleep(next_deadline - now)
-                    now = time.monotonic()
-                t_real = time.monotonic() - self.stream_state.start_mono
+                now = datetime.now(timezone.utc)
+                if now < next_sample_time:
+                    sleep_duration = (next_sample_time - now).total_seconds()
+                    await asyncio.sleep(sleep_duration)
+                    now = datetime.now(timezone.utc)
+                t_real = (now - stream_start).total_seconds()
             else:
                 # In non-realtime mode, simulate proper time intervals based on sample rate
                 t_real = self.stream_state.sample_index * stream_params["period"]
@@ -385,7 +415,7 @@ class AccelerometerGenerator:
             }
 
             self.stream_state.sample_index += 1
-            next_deadline += stream_params["period"]
+            next_sample_time += timedelta(seconds=stream_params["period"])
 
     def batch_stream(
         self,

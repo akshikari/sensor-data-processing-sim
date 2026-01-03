@@ -122,7 +122,6 @@ class StreamState:
 
     id: UUID
     start_ts_utc: datetime
-    start_mono: float  # monotonic reference (seconds)
     anomaly_state: AnomalyState
     sample_index: int = 0
 
@@ -141,7 +140,6 @@ class AccelerometerDataPoint(TypedDict):
 class StreamStartParameters(TypedDict):
     """Model for starting stream parameters returned by AccelerometerGenerator._prime_stream method."""
 
-    start_mono: float
     rng: np.random.Generator
     period: float
     gravity_world: npt.NDArray[np.float64]
