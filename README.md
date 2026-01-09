@@ -47,7 +47,7 @@ The heart of the simulator. It doesn't just play back static files; it calculate
 A modern FastAPI service to provision and manage sensors.
 
 - **Docs**: **[Full Documentation Hub](services/sensor_sim_api/docs/INDEX.md)**
-- **Features**: Sensor CRUD, configuration management, SQLite/PostgreSQL storage.
+- **Features**: Sensor CRUD, configuration management, PostgreSQL storage.
 
 ### 3. Legacy/Paused Components
 

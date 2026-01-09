@@ -30,7 +30,7 @@ Technical details and specifications:
 
 Understanding the concepts:
 
-- **[Design Decisions](explanation/DESIGN-DECISIONS.md)** - Why we built it this way.
+- **[Design Decisions](explanation/DESIGN-DECISIONS.md)** - Why the project was built it this way.
 - **[Data Model](explanation/DATA-MODEL.md)** - Deep dive into sensor data structures.
 
 ## Contributing

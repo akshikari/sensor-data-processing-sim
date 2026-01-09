@@ -2968,7 +2968,6 @@ name = "sensor-sim-api"
 version = "0.1.0"
 source = { editable = "services/sensor_sim_api" }
 dependencies = [
-    { name = "aiosqlite" },
     { name = "alembic" },
     { name = "fastapi", extra = ["standard-no-fastapi-cloud-cli"] },
     { name = "generators" },
@@ -2988,7 +2987,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosqlite", specifier = ">=0.22.0" },
     { name = "alembic", specifier = ">=1.17.2" },
     { name = "fastapi", extras = ["standard-no-fastapi-cloud-cli"], specifier = ">=0.124.0" },
     { name = "generators", editable = "data/generators" },
