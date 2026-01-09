@@ -12,8 +12,11 @@ members = [
     "data/writers",
     "data/transformers",
     "data/streams",
-    "data/services/sensor_sim_api",
+    "services/sensor_sim_api",
 ]
+
+[tool.uv.sources]
+ci-dagger = { path = ".dagger" }
 
 [tool.pytest.ini_options]
 markers = [
@@ -25,6 +28,12 @@ addopts = "-m 'not old_generator'"
 
 [tool.pytest_anyio]
 default_backend = "asyncio"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
 
 [dependency-groups]
 test = [
@@ -52,3 +61,9 @@ dev = [
     "jupyterlab>=4.4.1",
     "matplotlib>=3.10.1",
 ]
+dagger = [
+    "ci-dagger",
+]
+
+[project.entry-points."dagger.mod"]
+main_object = "monorepo_dagger:MonorepoDagger"

@@ -1,0 +1,35 @@
+---
+services:
+  db:
+    image: postgres:18
+    container_name: sensor_sim_db_prod
+    env_file: services/sensor_sim_api/.env.prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sensor_user -d sensor_sim_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: sensor-sim-api:latest
+    container_name: sensor_sim_api_prod
+    user: "1000:1000"
+    env_file: services/sensor_sim_api/.env.prod
+    environment:
+      # Override for Docker networking (not localhost)
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: fastapi run --workers 4 app/main.py
+
+volumes:
+  postgres_data_prod:

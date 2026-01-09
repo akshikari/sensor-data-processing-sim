@@ -1,0 +1,42 @@
+---
+services:
+  db-test:
+    image: postgres:18
+    container_name: sensor_sim_db_test
+    env_file: services/sensor_sim_api/.env.test
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_test:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sensor_user_test -d sensor_sim_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  app-test:
+    image: sensor-sim-api:dev
+    container_name: sensor_sim_api_test
+    user: "1000:1000"
+    env_file: services/sensor_sim_api/.env.test
+    environment:
+      # Set environment to test
+      ENV: test
+      # Override for Docker networking (not localhost)
+      POSTGRES_HOST: db-test
+      POSTGRES_PORT: 5432
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debug port
+    volumes:
+      - ./services/sensor_sim_api:/app/services/sensor_sim_api
+      - ./data/generators:/app/data/generators
+    depends_on:
+      db-test:
+        condition: service_healthy
+    command: >
+      sh -c "cd /app/services/sensor_sim_api && 
+      alembic upgrade head &&
+      pytest tests/ -v --tb=short --color=yes -p no:warnings"
+
+volumes:
+  postgres_data_test:
