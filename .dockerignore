@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+.dagger/sdk
+*.md
+LICENSE
+Makefile
+docker-compose.yml
+docker-compose.prod.yml

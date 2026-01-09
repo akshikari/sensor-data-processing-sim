@@ -1,0 +1,24 @@
+# Jupyter Notebooks - mark as documentation to exclude from language statistics
+*.ipynb linguist-detectable=false
+*.ipynb linguist-documentation
+
+# Analysis notebooks and their outputs are documentation
+data/qa_analysis/** linguist-documentation
+
+# Use custom diff driver for notebooks (if nbdime is installed)
+*.ipynb diff=jupyternotebook
+
+# Ensure consistent line endings
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.parquet binary
+*.db binary
