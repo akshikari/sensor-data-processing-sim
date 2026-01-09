@@ -1,0 +1,42 @@
+---
+services:
+  db:
+    image: postgres:18
+    container_name: sensor_sim_db
+    env_file: services/sensor_sim_api/.env.dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sensor_user -d sensor_sim_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: sensor-sim-api:dev
+    container_name: sensor_sim_api
+    user: "1000:1000"
+    env_file: services/sensor_sim_api/.env.dev
+    environment:
+      # Override for Docker networking (not localhost)
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debug port
+    volumes:
+      # Mount source code for hot-reload
+      - ./services/sensor_sim_api:/app/services/sensor_sim_api
+      - ./data/generators:/app/data/generators
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "cd /app/services/sensor_sim_api && python -m debugpy
+      --listen 0.0.0.0:5678 -m uvicorn app.main:app --host 0.0.0.0
+      --port 8000 --reload"
+
+volumes:
+  postgres_data:

@@ -5,13 +5,14 @@ from dataclasses import dataclass
 from uuid import UUID
 
 import numpy as np
+import numpy.typing as npt
 
 
 class AccelerometerData(TypedDict):
     """Data model for accelerometer time series data"""
 
     timestamp: datetime
-    sensor_id: UUID
+    id: UUID
     accel_x: float
     accel_y: float
     accel_z: float
@@ -104,3 +105,44 @@ class AnomalousDataModifierParams:
             raise ValueError("time_drift_offset must be >= 0")
         if self.z_amp_modifier is not None and self.z_amp_modifier <= 0:
             raise ValueError("z_amp_modifier must be > 0 when set")
+
+
+@dataclass
+class AnomalyState:
+    """State of persisted anomalous data such as time drift or step delay."""
+
+    cumulative_time_drift: float = 0.0
+    cumulative_step_delay: float = 0.0
+    last_step_idx_seen: int | None = None  # to apply step delay once per step-event
+
+
+@dataclass
+class StreamState:
+    """State of persisted stream metadata to maintain across generate data calls"""
+
+    id: UUID
+    start_ts_utc: datetime
+    anomaly_state: AnomalyState
+    sample_index: int = 0
+
+
+class AccelerometerDataPoint(TypedDict):
+    """Model for single accelerometer data point"""
+
+    timestamp: datetime
+    id: UUID
+    accel_x: float
+    accel_y: float
+    accel_z: float
+    sequence: int
+
+
+class StreamStartParameters(TypedDict):
+    """Model for starting stream parameters returned by AccelerometerGenerator._prime_stream method."""
+
+    rng: np.random.Generator
+    period: float
+    gravity_world: npt.NDArray[np.float64]
+    omega_gait: float
+    omega_sway: float
+    omega_bounce: float

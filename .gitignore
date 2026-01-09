@@ -129,6 +129,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -186,3 +188,18 @@ terraform.tfstate.backup
 .aws/
 *.pem
 *.key
+
+# Project-specific: Generated data files from notebooks
+# Keep notebooks with outputs for GitHub rendering, but exclude large generated data
+data/qa_analysis/*.parquet
+data/qa_analysis/*.csv
+data/qa_analysis/data/
+data/qa_analysis/output/
+
+# Docker
+postgres_data/
+*.db
+*.db-journal
+
+# Dagger build artifacts
+*.tar

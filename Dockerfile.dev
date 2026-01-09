@@ -1,0 +1,48 @@
+# Multi-stage Dockerfile for Dagger monorepo builds
+# Dagger targets either deps-prod or deps-dev, then adds source code via operations
+
+FROM python:3.12-slim AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+
+# Install system dependencies for psycopg2
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked\
+    apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_PROJECT_ENVIRONMENT=/usr/local \
+    UV_PYTHON=/usr/local/bin/python \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_FROZEN=1
+
+RUN groupadd --gid 1000 appgroup && \
+    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser && \
+    mkdir -p /app && \
+    chown -R appuser:appgroup /app
+
+FROM base as deps-prod
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+
+ARG PACKAGE
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-install-workspace --all-extras --no-dev --package $PACKAGE
+
+RUN chown -R appuser:appgroup /app /usr/local
+
+FROM deps-prod AS deps-dev
+
+ARG PACKAGE
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-install-workspace --inexact --package $PACKAGE
+
+RUN chown -R appuser:appgroup /app /usr/local
