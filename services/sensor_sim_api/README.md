@@ -1,153 +1,63 @@
 # Sensor Simulation API
 
-REST API for real-time sensor data streaming using the accelerometer generator library.
+**A high-performance REST API for simulating robot IMU sensor data streams.**
 
-## Environment Setup
+[![Tests](https://img.shields.io/badge/tests-passing-green.svg)](tests/)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.124+-009688.svg)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg)](Dockerfile)
 
-### Environment Files
+## Overview
 
-The project uses different `.env` files for each environment:
+The **Sensor Simulation API** is the core control plane for the Sensor Data Processing Simulator. It allows users to:
 
-- `.env.dev` - Development environment (with debugger support)
-- `.env.test` - Test environment (used by pytest)
-- `.env.prod` - Production environment (secure, not committed to git)
-- `.env.example` - Template showing all required variables
+- Manage sensor configurations ([Accelerometers](docs/GLOSSARY.md#accelerometer), [Gyroscopes](docs/GLOSSARY.md#gyroscope)).
+- Simulate realistic sensor noise, drift, and bias.
+- Stream generated data to downstream processing pipelines.
 
-**Setup Steps:**
+Built with **FastAPI** and **PostgreSQL**, following **Clean Architecture** principles to ensure scalability and maintainability.
 
-1. Copy `.env.example` to create your environment files:
+## Quick Links
 
-   ```bash
-   cp .env.example .env.dev
-   cp .env.example .env.test
-   cp .env.example .env.prod
-   ```
+| Resource                                                   | Description                      |
+| ---------------------------------------------------------- | -------------------------------- |
+| **[Quickstart Guide](docs/getting-started/QUICKSTART.md)** | Get up and running in 5 minutes. |
+| **[Documentation Index](docs/INDEX.md)**                   | Full documentation hub.          |
+| **[Troubleshooting](TROUBLESHOOTING.md)**                  | Solutions for common issues.     |
+| **[Glossary](docs/GLOSSARY.md)**                           | Domain terminology.              |
 
-2. Update each file with appropriate values for that environment
+## Key Features
 
-3. **NEVER commit `.env.dev`, `.env.test`, or `.env.prod`** - they are gitignored
+- **Realistic Simulation**: Uses statistical models to generate noisy sensor data.
+- **RESTful Management**: logical endpoints for sensor CRUD operations.
+- **Robust Storage**: PostgreSQL with SQLAlchemy ORM and Alembic migrations.
+- **Developer Experience**:
+  - Hot-reloading in development.
+  - VS Code Debugger integration within Docker.
+  - Comprehensive test suite (Service + Data layers).
 
-## Building with Dagger
-
-The project uses [Dagger](https://dagger.io) to build Docker images efficiently with smart caching.
-
-From the **repository root**, run:
-
-### Development Image (with debugger on port 5678)
-
-```bash
-make build-dev
-```
-
-Or directly:
+## Minimal Setup
 
 ```bash
-dagger call build-dev-image --project sensor_sim_api --tag dev
-```
+# 1. Configure environment
+cp .env.example .env.dev
 
-### Production Image
-
-```bash
-make build
-```
-
-Or directly:
-
-```bash
-dagger call build-prod-image --project sensor_sim_api --tag latest
-```
-
-## Running with Docker Compose
-
-### Development Environment
-
-```bash
+# 2. Start development environment (requires Docker)
 make dev
 ```
 
-This will:
-
-1. Build the dev image with Dagger
-2. Start PostgreSQL database
-3. Start FastAPI app with hot-reload and debugger
-
-Access the API at: http://localhost:8000
-Attach debugger at: localhost:5678
-
-### Production Environment
-
-```bash
-make prod
-```
-
-This will:
-
-1. Build the production image with Dagger
-2. Start PostgreSQL database
-3. Start FastAPI app with 4 workers (no debugger)
-
-## Database Management
-
-This project uses Alembic for all database schema management.
-
-### Initial Setup
-
-```bash
-make db-up          # Start database
-make db-migrate     # Run all migrations
-```
-
-### Making Schema Changes
-
-1. Edit models in `app/data/models/sql/`
-2. Generate migration:
-   ```bash
-   make db-migrate-generate
-   # Enter descriptive message when prompted
-   ```
-3. Review the generated migration in `alembic/versions/`
-4. Apply migration:
-   ```bash
-   make db-migrate
-   ```
-
-### Other Commands
-
-```bash
-make db-migrate-current      # Show current migration
-make db-migrate-history      # Show all migrations
-make db-migrate-downgrade    # Rollback last migration
-make db-reset                # Fresh database with all migrations
-make db-shell                # Open psql shell
-make db-down                 # Stop database
-```
-
-**Note:** We use Alembic exclusively for schema management. All schema changes must go through Alembic migrations.
+Visit **[http://localhost:8000/docs](http://localhost:8000/docs)** to explore the API interactively.
 
 ## Testing
 
 ```bash
-make test          # Run tests (creates test database automatically)
+make test-sensor-sim-api   # Run API service tests
+make test-all              # Run all tests in the monorepo
 ```
 
-## Other Commands
+## Project Structure
 
-```bash
-make lint          # Run ruff linter
-make format        # Format code with ruff
-make logs          # View service logs
-make stop          # Stop all services
-make clean         # Clean up containers and cache
-```
-
-## Domain Models
-
-### Core Domains
-
-#### Streams
-
-## Local Development (without Docker)
-
-```bash
-uv run fastapi dev app/main.py
-```
+- `app/api` - Routes and Request/Response handling.
+- `app/domain` - Business logic and use cases.
+- `app/data` - Database models and repositories.
+- `app/core` - Configuration and infrastructure code.
