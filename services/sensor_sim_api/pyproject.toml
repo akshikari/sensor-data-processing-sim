@@ -9,7 +9,6 @@ dependencies = [
  "pydantic-settings>=2.0.0",
  "fastapi[standard-no-fastapi-cloud-cli]>=0.124.0",
  "alembic>=1.17.2",
- "aiosqlite>=0.22.0",
  "sqlalchemy>=2.0.45",
  "psycopg[binary,pool]>=3.3.2",
  "generators",
