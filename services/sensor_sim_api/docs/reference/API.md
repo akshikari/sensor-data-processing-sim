@@ -25,12 +25,14 @@ Manage virtual [accelerometer](../GLOSSARY.md#accelerometer) sensors.
   "id": "uuid",
   "sensor_type_id": "uuid",
   "generate_data_params": {
+    "// See": "[GenerateDataParams](../../../../data/generators/docs/reference/API.md#generatedataparams)",
     "gait_frequency_hz": 2.0,
     "amplitude_sway_m": 0.05,
     "amplitude_bounce_m": 0.02,
     "noise_std_dev": 0.01
   },
   "anomalous_data_params": {
+    "// See": "[AnomalousDataModifierParams](../../../../data/generators/docs/reference/API.md#anomalousdatamodifierparams)",
     "z_amp_modifier": 0.8,
     "step_frequency": 4
   },

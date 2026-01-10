@@ -2,6 +2,8 @@
 
 The Simulator does not play back pre-recorded data. Instead, it generates data procedurally using physics-based statistical models.
 
+> For a deep dive into the mathematical implementation, see the **[Generators Physics Documentation](../../../../data/generators/docs/explanation/PHYSICS.md)**.
+
 ## Accelerometer Model
 
 The accelerometer simulation is based on **[Simple Harmonic Motion (SHM)](../GLOSSARY.md#simple-harmonic-motion-shm)** to approximate quadruped walking patterns.

@@ -29,8 +29,8 @@ applying any necessary business logic or rules in between.
 ### Motivation
 
 - **Reliability**: Industry-standard relational database.
-- **JSONB**: We use JSONB columns for `generate_data_params`. This allows us to store different configuration schemas for different sensor types without altering the table structure.
-  - Jury is still out on this. Just picking JSONB now to be flexible until schema decisions can be finalized after implementing other sensors.
+- **JSONB**: JSONB columns are used for `generate_data_params`. This allows for storing different configuration schemas for different sensor types without altering the table structure.
+  - This decision is provisional. JSONB was selected to prioritize flexibility until schema decisions can be finalized after implementing other sensors.
 - **Migrations**: Alembic provides version control for the database schema.
 
 ## 4. Dagger for CI/CD
@@ -44,17 +44,16 @@ applying any necessary business logic or rules in between.
 !> [!NOTE]
 
 > When developing on MacOS, the dagger calls to Docker Desktop trigger several "Allow {terminal-running-dagger} access to other apps data" prompts.
-> Online resources say this is due to MacOS' security policies. This can prove to be quite a headache and the only solution I've seen is to allow
-> your terminal Full Disk Access, which is absolutely wild. I originally had some work around code that involved writing the tarball to my `/tmp`
-> directory, then using `make` commands to make `docker` CLI calls to build the image from the tarball, which only reduced the number of security
-> access prompts but did not get rid of the issue. For now I have implemented dagger as intended (using the `export` function) and just deal with the prompts.
-> I may consider moving my development setup to a containerized environment and see if that helps.
+> Online resources say this is due to MacOS' security policies. This can prove to be quite a headache and the only solution found so far is to allow
+> the terminal Full Disk Access. Workarounds involving writing the tarball to the `/tmp` directory and using `make` commands to make `docker` CLI
+> calls to build the image from the tarball only reduced the number of security access prompts but did not get rid of the issue. For now dagger is
+> implemented as intended (using the `export` function). Moving the development setup to a containerized environment may help resolve this.
 
 ## 5. Monorepo Structure
 
 ### Motivation
 
 - **Shared Code**: The `generators` data library is shared between the API and the future Streaming Service.
-- **Maintainability**: I've become fond of monorepo setups, but I know it can have challenges especially with projects with conflicting dependencies.
-  So far online I haven't seen any "nice" solutions to managing such a monorepo with `uv`, but my current implementation has been mostly smooth so far.
+- **Maintainability**: Monorepo setups have significant benefits, but can have challenges especially with projects with conflicting dependencies.
+  Existing solutions for managing such a monorepo with `uv` are limited, but the current implementation has been mostly smooth so far.
 - **Tooling**: Unified tooling (Make, UV, dagger) simplifies the developer workflow.
