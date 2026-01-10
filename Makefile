@@ -63,20 +63,20 @@ help:
 	@echo "  make format        - Format code"
 
 build-dev:
-	@echo "🔍 Getting project version..."
+	@echo "Getting project version..."
 	@VERSION=$$(dagger call get-project-version --project $(PROJECT)); \
-	echo "🔨 Building and exporting dev image (version: $$VERSION)..."; \
+	echo "Building and exporting dev image (version: $$VERSION)..."; \
 	dagger call build-dev-image --project $(PROJECT) export-image --name $(PROJECT):$$VERSION-dev; \
 	docker tag $(PROJECT):$$VERSION-dev $(PROJECT):dev; \
-	echo "✅ Built $(PROJECT):$$VERSION-dev (also tagged as :dev)"
+	echo "✓ Built $(PROJECT):$$VERSION-dev (also tagged as :dev)"
 
 build:
-	@echo "🔍 Getting project version..."
+	@echo "Getting project version..."
 	@VERSION=$$(dagger call get-project-version --project $(PROJECT)); \
-	echo "🔨 Building and exporting prod image (version: $$VERSION)..."; \
+	echo "Building and exporting prod image (version: $$VERSION)..."; \
 	dagger call build-prod-image --project $(PROJECT) export-image --name $(PROJECT):$$VERSION; \
 	docker tag $(PROJECT):$$VERSION $(PROJECT):latest; \
-	echo "✅ Built $(PROJECT):$$VERSION (also tagged as :latest)"
+	echo "✓ Built $(PROJECT):$$VERSION (also tagged as :latest)"
 
 dev: build-dev
 	@echo "Starting development environment..."
@@ -93,7 +93,7 @@ stop:
 test-sensor-sim-api:
 	@echo "Running sensor-sim-api tests..."
 	@docker compose -f docker-compose.test.yml up -d db-test app-test || \
-		(echo "❌ Failed to start test containers"; docker compose -f docker-compose.test.yml down; exit 1)
+		(echo "✗ Failed to start test containers"; docker compose -f docker-compose.test.yml down; exit 1)
 	@echo "Waiting for containers to be ready..."
 	@sleep 2
 	@echo ""
@@ -108,11 +108,11 @@ test-sensor-sim-api:
 		echo "==================== CLEANING UP ====================="; \
 		echo ""; \
 		docker compose -f docker-compose.test.yml down || \
-			(echo "❌ Failed to stop containers - possible hanging process!"; exit 1); \
+			(echo "✗ Failed to stop containers - possible hanging process!"; exit 1); \
 		if [ $$EXIT_CODE -eq 0 ]; then \
 			echo "✓ sensor-sim-api tests passed (35 tests)"; \
 		else \
-			echo "❌ sensor-sim-api tests failed (exit code: $$EXIT_CODE)"; \
+			echo "✗ sensor-sim-api tests failed (exit code: $$EXIT_CODE)"; \
 		fi; \
 		exit $$EXIT_CODE
 
@@ -126,7 +126,7 @@ test-services: test-sensor-sim-api
 test-generators:
 	@echo "Running generator tests..."
 	@cd data/generators && uv run pytest tests/ -q || \
-		(echo ""; echo "❌ Generator tests failed"; \
+		(echo ""; echo "✗ Generator tests failed"; \
 		 echo ""; echo "Re-running failed tests with verbose output..."; \
 		 echo ""; uv run pytest tests/ --lf -v; exit 1)
 	@echo "✓ Generator tests passed"
@@ -155,14 +155,14 @@ test-all: test-services test-data
 test-db-setup:
 	@echo "Setting up test database..."
 	@docker compose -f docker-compose.test.yml up -d db-test || \
-		(echo "❌ Failed to start test database"; exit 1)
+		(echo "✗ Failed to start test database"; exit 1)
 	@echo "Waiting for test database to be ready..."
 	@MAX_ATTEMPTS=30; \
 	ATTEMPT=0; \
 	until docker exec $(TEST_DB_CONTAINER) pg_isready -U $(TEST_POSTGRES_USER) -d $(TEST_POSTGRES_DB) > /dev/null 2>&1; do \
 		ATTEMPT=$$((ATTEMPT + 1)); \
 		if [ $$ATTEMPT -ge $$MAX_ATTEMPTS ]; then \
-			echo "❌ Test database failed to start after $$MAX_ATTEMPTS attempts"; \
+			echo "✗ Test database failed to start after $$MAX_ATTEMPTS attempts"; \
 			docker compose -f docker-compose.test.yml down; \
 			exit 1; \
 		fi; \
@@ -172,10 +172,10 @@ test-db-setup:
 	@echo "Running migrations on test database..."
 	@docker compose -f docker-compose.test.yml run --rm app-test \
 		sh -c "cd /app/services/sensor_sim_api && alembic upgrade head" || \
-		(echo "❌ Migrations failed"; docker compose -f docker-compose.test.yml down; exit 1)
+		(echo "✗ Migrations failed"; docker compose -f docker-compose.test.yml down; exit 1)
 	@echo "Stopping test containers..."
 	@docker compose -f docker-compose.test.yml down || \
-		(echo "❌ Failed to stop containers - possible hanging process!"; exit 1)
+		(echo "✗ Failed to stop containers - possible hanging process!"; exit 1)
 	@echo "✓ Test database setup complete"
 
 test-db-down:
