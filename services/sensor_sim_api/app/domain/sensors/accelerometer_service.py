@@ -8,6 +8,7 @@ from app.data.models.api_schemas import (
     AccelerometerCreate,
     AccelerometerResponse,
     AccelerometerUpdate,
+    AccelerometerList,
 )
 from app.data.repositories.sensors import AccelerometerRepository
 from app.data.models.sql import Accelerometer
@@ -28,6 +29,23 @@ class AccelerometerService:
         :param db: SQLAlchemy AsyncSession to pass to the repository for database operations.
         """
         self.repository = AccelerometerRepository(db)
+
+    async def get_all_accelerometers(
+        self, skip: int = 0, limit: int = 100
+    ) -> AccelerometerList:
+        """Get a paginated list of all active accelerometers.
+
+        :param skip: Number of records to skip
+        :param limit: Maximum number of records to return
+        :return: List of accelerometers and total count
+        """
+        items, total = await self.repository.get_all_accelerometers(skip, limit)
+
+        accelerometer_responses = [
+            AccelerometerResponse.model_validate(item) for item in items
+        ]
+
+        return AccelerometerList(accelerometers=accelerometer_responses, total=total)
 
     async def get_accelerometer(self, id: UUID) -> AccelerometerResponse:
         """Get an accelerometer by its ID
