@@ -517,3 +517,137 @@ class TestAccelerometerDataIntegrity:
             f"/api/v1/sensors/accelerometer/{accelerometer_id}"
         )
         assert final_get.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestGetAllAccelerometers:
+    """Tests for GET /api/v1/sensors/accelerometer/"""
+
+    async def test_get_all_empty_list(self, client):
+        """Test retrieving empty list when no accelerometers exist."""
+        response = await client.get("/api/v1/sensors/accelerometer/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["accelerometers"] == []
+        assert data["total"] == 0
+
+    async def test_get_all_single_accelerometer(self, client, sensor_type):
+        """Test retrieving list with a single accelerometer."""
+        create_payload = {"sensor_type_id": str(sensor_type.id)}
+        create_response = await client.post(
+            "/api/v1/sensors/accelerometer/", json=create_payload
+        )
+        created_id = create_response.json()["id"]
+
+        response = await client.get("/api/v1/sensors/accelerometer/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["accelerometers"]) == 1
+        assert data["total"] == 1
+        assert data["accelerometers"][0]["id"] == created_id
+
+    async def test_get_all_multiple_accelerometers(self, client, sensor_type):
+        """Test retrieving list with multiple accelerometers."""
+        # Create 3 accelerometers
+        for _ in range(3):
+            payload = {"sensor_type_id": str(sensor_type.id)}
+            response = await client.post("/api/v1/sensors/accelerometer/", json=payload)
+            assert response.status_code == status.HTTP_201_CREATED
+
+        response = await client.get("/api/v1/sensors/accelerometer/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["accelerometers"]) == 3
+        assert data["total"] == 3
+
+    async def test_get_all_ordering(self, client, sensor_type):
+        """Test that results are ordered by create_ts DESC (newest first)."""
+        # Create 3 accelerometers with slight delays to ensure different timestamps
+        created_ids = []
+        for i in range(3):
+            payload = {"sensor_type_id": str(sensor_type.id)}
+            response = await client.post("/api/v1/sensors/accelerometer/", json=payload)
+            assert response.status_code == status.HTTP_201_CREATED
+            created_ids.append(response.json()["id"])
+            if i < 2:
+                await asyncio.sleep(0.05)
+
+        response = await client.get("/api/v1/sensors/accelerometer/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        returned_ids = [item["id"] for item in data["accelerometers"]]
+
+        # Newest should be first (reverse order of creation)
+        assert returned_ids == list(reversed(created_ids))
+
+    async def test_get_all_pagination_skip(self, client, sensor_type):
+        """Test pagination with skip parameter."""
+        # Create 5 accelerometers
+        for _ in range(5):
+            payload = {"sensor_type_id": str(sensor_type.id)}
+            await client.post("/api/v1/sensors/accelerometer/", json=payload)
+
+        response = await client.get("/api/v1/sensors/accelerometer/?skip=2")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["accelerometers"]) == 3
+        assert data["total"] == 5
+
+    async def test_get_all_pagination_limit(self, client, sensor_type):
+        """Test pagination with limit parameter."""
+        # Create 5 accelerometers
+        for _ in range(5):
+            payload = {"sensor_type_id": str(sensor_type.id)}
+            await client.post("/api/v1/sensors/accelerometer/", json=payload)
+
+        response = await client.get("/api/v1/sensors/accelerometer/?limit=2")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["accelerometers"]) == 2
+        assert data["total"] == 5
+
+    async def test_get_all_pagination_skip_and_limit(self, client, sensor_type):
+        """Test pagination with both skip and limit parameters."""
+        # Create 10 accelerometers
+        for _ in range(10):
+            payload = {"sensor_type_id": str(sensor_type.id)}
+            await client.post("/api/v1/sensors/accelerometer/", json=payload)
+
+        response = await client.get("/api/v1/sensors/accelerometer/?skip=3&limit=4")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["accelerometers"]) == 4
+        assert data["total"] == 10
+
+    async def test_get_all_excludes_archived(self, client, sensor_type):
+        """Test that archived accelerometers are excluded from results."""
+        # Create 4 accelerometers
+        created_ids = []
+        for _ in range(4):
+            payload = {"sensor_type_id": str(sensor_type.id)}
+            response = await client.post("/api/v1/sensors/accelerometer/", json=payload)
+            created_ids.append(response.json()["id"])
+
+        # Archive 2 of them
+        await client.delete(f"/api/v1/sensors/accelerometer/{created_ids[0]}")
+        await client.delete(f"/api/v1/sensors/accelerometer/{created_ids[2]}")
+
+        response = await client.get("/api/v1/sensors/accelerometer/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["accelerometers"]) == 2
+        assert data["total"] == 2
+
+        # Verify the archived ones are not in the list
+        returned_ids = [item["id"] for item in data["accelerometers"]]
+        assert created_ids[0] not in returned_ids
+        assert created_ids[2] not in returned_ids
+        assert created_ids[1] in returned_ids
+        assert created_ids[3] in returned_ids

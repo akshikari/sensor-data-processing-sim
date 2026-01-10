@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.api_schemas import (
     AccelerometerCreate,
+    AccelerometerList,
     AccelerometerUpdate,
     AccelerometerResponse,
 )
@@ -36,6 +37,33 @@ from app.data.sources.db import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/accelerometer", tags=["Accelerometer"])
+
+
+@router.get(
+    "/",
+    summary="List accelerometers",
+    response_model=AccelerometerList,
+    response_description="Paginated list of active accelerometers",
+    responses={
+        200: {"description": "List retrieved successfully"},
+    },
+)
+async def get_all_accelerometers(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = 0,
+    limit: int = 100,
+):
+    """Retrieve a paginated list of all active accelerometer sensors."""
+    try:
+        service = AccelerometerService(db)
+        result = await service.get_all_accelerometers(skip=skip, limit=limit)
+        return result
+    except DatabaseError as err:
+        logger.error("Database error occurred during list accelerometers: %s", err)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service currently unavailable.",
+        ) from err
 
 
 @router.get(
