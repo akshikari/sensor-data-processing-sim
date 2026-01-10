@@ -3,9 +3,9 @@
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
     DatabaseError,
@@ -22,17 +22,17 @@ logger = get_logger(__name__)
 class AccelerometerRepository:
     """Data access repository for accelerometer sensor CRUD operations.
 
-    :ivar db: SQLAlchemy database session for executing queries.
+    :ivar db: SQLAlchemy async database session for executing queries.
     """
 
-    def __init__(self, db: Session):
-        """Initialize the repository with a database session.
+    def __init__(self, db: AsyncSession):
+        """Initialize the repository with an async database session.
 
-        :param db: Active SQLAlchemy session for database operations.
+        :param db: Active SQLAlchemy AsyncSession for database operations.
         """
         self.db = db
 
-    def get_accelerometer(self, id: UUID) -> Accelerometer | None:
+    async def get_accelerometer(self, id: UUID) -> Accelerometer | None:
         """Get an accelerometer by its ID from the database.
 
         :param id: ID of the desired accelerometer.
@@ -42,7 +42,7 @@ class AccelerometerRepository:
             and_(Accelerometer.id == id, Accelerometer.archived == False)
         )
         try:
-            result = self.db.execute(stmt)
+            result = await self.db.execute(stmt)
             accelerometer = result.scalar_one_or_none()
             return accelerometer
         except OperationalError as err:
@@ -52,7 +52,7 @@ class AccelerometerRepository:
             )
             raise DatabaseError("get accelerometer", err) from err
 
-    def create_accelerometer(self, accelerometer: Accelerometer) -> Accelerometer:
+    async def create_accelerometer(self, accelerometer: Accelerometer) -> Accelerometer:
         """Create a new accelerometer sensor in the database.
 
         :param accelerometer: Accelerometer model instance to persist. Should have
@@ -66,8 +66,8 @@ class AccelerometerRepository:
         """
         try:
             self.db.add(accelerometer)
-            self.db.commit()
-            self.db.refresh(accelerometer)
+            await self.db.commit()
+            await self.db.refresh(accelerometer)
             return accelerometer
         except IntegrityError as err:
             error_msg = str(err.orig) if hasattr(err, "orig") else str(err)
@@ -94,7 +94,7 @@ class AccelerometerRepository:
             )
             raise DatabaseError("create accelerometer", err) from err
 
-    def update_accelerometer(
+    async def update_accelerometer(
         self, id: UUID, updates: dict[str, Any]
     ) -> Accelerometer | None:
         """Update an accelerometer with the provided values
@@ -112,8 +112,8 @@ class AccelerometerRepository:
         )
 
         try:
-            result = self.db.execute(stmt)
-            self.db.commit()
+            result = await self.db.execute(stmt)
+            await self.db.commit()
             return result.scalar_one_or_none()
         except IntegrityError as err:
             error_msg = str(err.orig) if hasattr(err, "orig") else str(err)
@@ -127,7 +127,7 @@ class AccelerometerRepository:
             )
             raise DatabaseError("update accelerometer", err) from err
 
-    def delete_accelerometer(self, id: UUID) -> Accelerometer | None:
+    async def delete_accelerometer(self, id: UUID) -> Accelerometer | None:
         """Delete an accelerometer with the provided ID
 
         :param id: ID of the accelerometer to delete
@@ -147,8 +147,8 @@ class AccelerometerRepository:
         )
 
         try:
-            result = self.db.execute(stmt)
-            self.db.commit()
+            result = await self.db.execute(stmt)
+            await self.db.commit()
             return result.scalar_one_or_none()
         except OperationalError as err:
             logger.error(
