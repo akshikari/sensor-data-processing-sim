@@ -32,11 +32,21 @@ def SessionLocal(engine):
 
 
 @pytest_asyncio.fixture
-async def db_session(SessionLocal):
+async def db_session(engine):
     """Create database session with transaction rollback for test isolation."""
-    async with SessionLocal() as session:
-        yield session
-        await session.rollback()
+    # Create a connection and begin a transaction
+    connection = await engine.connect()
+    transaction = await connection.begin()
+
+    # Create session bound to the transaction
+    session = AsyncSession(bind=connection, expire_on_commit=False)
+
+    yield session
+
+    # Rollback the transaction and close
+    await session.close()
+    await transaction.rollback()
+    await connection.close()
 
 
 @pytest_asyncio.fixture

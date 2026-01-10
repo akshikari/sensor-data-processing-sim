@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, select, update, func
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.core.exceptions import (
@@ -31,6 +31,46 @@ class AccelerometerRepository:
         :param db: Active SQLAlchemy AsyncSession for database operations.
         """
         self.db = db
+
+    async def get_all_accelerometers(
+        self, skip: int = 0, limit: int = 100
+    ) -> tuple[list[Accelerometer], int]:
+        """Get all active accelerometers with pagination.
+
+        :param skip: Number of records to skip (offset)
+        :param limit: Maximum number of records to return
+        :return: Tuple containing (list of accelerometers, total count)
+        """
+        # Query for items
+        stmt = (
+            select(Accelerometer)
+            .where(Accelerometer.archived == False)
+            .order_by(Accelerometer.create_ts.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        # Query for total count
+        count_stmt = (
+            select(func.count())
+            .select_from(Accelerometer)
+            .where(Accelerometer.archived == False)
+        )
+
+        try:
+            result = await self.db.execute(stmt)
+            items = result.scalars().all()
+
+            count_result = await self.db.execute(count_stmt)
+            total = count_result.scalar_one()
+
+            return list(items), total
+        except OperationalError as err:
+            logger.error(
+                f"Database operational error during get all accelerometers: {err}",
+                exc_info=True,
+            )
+            raise DatabaseError("get all accelerometers", err) from err
 
     async def get_accelerometer(self, id: UUID) -> Accelerometer | None:
         """Get an accelerometer by its ID from the database.

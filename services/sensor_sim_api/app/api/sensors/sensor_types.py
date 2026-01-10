@@ -9,6 +9,7 @@ from app.data.models.api_schemas import (
     SensorTypeCreate,
     SensorTypeUpdate,
     SensorTypeResponse,
+    SensorTypeList,
 )
 from app.domain.sensors import SensorTypeService
 from app.core.exceptions import (
@@ -22,6 +23,33 @@ from app.data.sources.db import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sensor-type", tags=["Sensor Type"])
+
+
+@router.get(
+    "/",
+    summary="List sensor types",
+    response_model=SensorTypeList,
+    response_description="Paginated list of active sensor types",
+    responses={
+        200: {"description": "List retrieved successfully"},
+    },
+)
+async def get_all_sensor_types(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = 0,
+    limit: int = 100,
+):
+    """Retrieve a paginated list of all active sensor types."""
+    try:
+        service = SensorTypeService(db)
+        result = await service.get_all_sensor_types(skip=skip, limit=limit)
+        return result
+    except DatabaseError as err:
+        logger.error("Database error occurred during list sensor types: %s", err)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service currently unavailable.",
+        ) from err
 
 
 @router.get(

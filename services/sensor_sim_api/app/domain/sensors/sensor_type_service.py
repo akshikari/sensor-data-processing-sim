@@ -8,6 +8,7 @@ from app.data.models.api_schemas import (
     SensorTypeCreate,
     SensorTypeResponse,
     SensorTypeUpdate,
+    SensorTypeList,
 )
 from app.data.repositories.sensors import SensorTypeRepository
 from app.data.models.sql import SensorType
@@ -28,6 +29,23 @@ class SensorTypeService:
         :param db: SQLAlchemy AsyncSession to pass to the repository for database operations.
         """
         self.repository = SensorTypeRepository(db)
+
+    async def get_all_sensor_types(
+        self, skip: int = 0, limit: int = 100
+    ) -> SensorTypeList:
+        """Get a paginated list of all active sensor types.
+
+        :param skip: Number of records to skip
+        :param limit: Maximum number of records to return
+        :return: List of sensor types and total count
+        """
+        items, total = await self.repository.get_all_sensor_types(skip, limit)
+
+        sensor_type_responses = [
+            SensorTypeResponse.model_validate(item) for item in items
+        ]
+
+        return SensorTypeList(sensor_types=sensor_type_responses, total=total)
 
     async def get_sensor_type(self, id: UUID) -> SensorTypeResponse:
         """Get a sensor type by its ID
