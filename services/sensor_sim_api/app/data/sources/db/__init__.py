@@ -1,3 +1,3 @@
-from .database import setup_db, get_db
+from .database import setup_async_db, get_db
 
-__all__ = ["setup_db", "get_db"]
+__all__ = ["setup_async_db", "get_db"]
