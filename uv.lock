@@ -3412,7 +3412,7 @@ test = [
 
 [[package]]
 name = "sensor-sim-api"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "services/sensor_sim_api" }
 dependencies = [
     { name = "alembic" },
