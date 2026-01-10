@@ -49,7 +49,7 @@ Now you can create a specific [accelerometer](../GLOSSARY.md#accelerometer) inst
 
 !> [!NOTE]
 
-> Pleaes read the documentation on the GenerateDataParams. A lot of these parameters have defaults worth knowing
+> Please read the documentation on [GenerateDataParams](../../../../data/generators/docs/reference/API.md#generatedataparams). A lot of these parameters have defaults worth knowing.
 
 **Request:**
 

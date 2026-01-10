@@ -39,6 +39,7 @@ and magnetometer sensor simulators as well.
 
 The heart of the simulator. It doesn't just play back static files; it calculates motion vectors in real-time.
 
+- **Docs**: **[Full Documentation Hub](data/generators/docs/INDEX.md)**
 - **Model**: Uses [Simple Harmonic Motion](services/sensor_sim_api/docs/GLOSSARY.md#simple-harmonic-motion-shm) to approximate quadruped walking gaits.
 - **Features**: Simulates [Body Frame](services/sensor_sim_api/docs/GLOSSARY.md#body-frame) rotation, gravity subtraction, and white noise injection.
 
