@@ -1,7 +1,7 @@
 """Business logic service layer for sensor type operations."""
 
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ResourceNotFoundError
 from app.data.models.api_schemas import (
@@ -22,14 +22,14 @@ class SensorTypeService:
 
     """
 
-    def __init__(self, db: Session):
-        """Initialize the service with a database session.
+    def __init__(self, db: AsyncSession):
+        """Initialize the service with an async database session.
 
-        :param db: SQLAlchemy session to pass to the repository for database operations.
+        :param db: SQLAlchemy AsyncSession to pass to the repository for database operations.
         """
         self.repository = SensorTypeRepository(db)
 
-    def get_sensor_type(self, id: UUID) -> SensorTypeResponse:
+    async def get_sensor_type(self, id: UUID) -> SensorTypeResponse:
         """Get a sensor type by its ID
 
         :param id: ID of the sensor type to retrieve
@@ -37,12 +37,14 @@ class SensorTypeService:
             found or has been archived.
         :return: A sensor type with the given ID if found
         """
-        sensor_type = self.repository.get_sensor_type(id)
+        sensor_type = await self.repository.get_sensor_type(id)
         if not sensor_type:
             raise ResourceNotFoundError("Sensor Type", str(id))
         return SensorTypeResponse.model_validate(sensor_type)
 
-    def create_sensor_type(self, sensor_type: SensorTypeCreate) -> SensorTypeResponse:
+    async def create_sensor_type(
+        self, sensor_type: SensorTypeCreate
+    ) -> SensorTypeResponse:
         """Create a new sensor type.
 
         :param sensor_type: Validated API request schema containing sensor
@@ -54,10 +56,10 @@ class SensorTypeService:
         :return: Newly created sensor type.
         """
         db_model = SensorType(id=sensor_type.id, name=sensor_type.name)
-        created = self.repository.create_sensor_type(db_model)
+        created = await self.repository.create_sensor_type(db_model)
         return SensorTypeResponse.model_validate(created)
 
-    def update_sensor_type(
+    async def update_sensor_type(
         self, id: UUID, updates: SensorTypeUpdate
     ) -> SensorTypeResponse:
         """Update the sensor type with the given ID. Handles partial updates of fields.
@@ -70,12 +72,12 @@ class SensorTypeService:
         :return: Newly updated sensor type.
         """
         updates_data = updates.model_dump(exclude_unset=True)
-        updated_sensor_type = self.repository.update_sensor_type(id, updates_data)
+        updated_sensor_type = await self.repository.update_sensor_type(id, updates_data)
         if not updated_sensor_type:
             raise ResourceNotFoundError("Sensor Type", str(id))
         return SensorTypeResponse.model_validate(updated_sensor_type)
 
-    def delete_sensor_type(self, id: UUID) -> None:
+    async def delete_sensor_type(self, id: UUID) -> None:
         """Archive an sensor type by ID
 
         :param id: The ID of the sensor type to be deleted.
@@ -83,7 +85,7 @@ class SensorTypeService:
             or has been archived.
         :return: None
         """
-        result = self.repository.delete_sensor_type(id)
+        result = await self.repository.delete_sensor_type(id)
         if not result:
             raise ResourceNotFoundError("Sensor Type", str(id))
         return

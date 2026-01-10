@@ -1,8 +1,12 @@
 """Database setup with shared configuration for production and tests."""
 
-from typing import Any
-from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import sessionmaker
+from typing import Any, AsyncGenerator
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -10,22 +14,22 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def setup_db(
+def setup_async_db(
     database_url: str,
     echo: bool = False,
     **engine_kwargs: Any,
-) -> Engine:
-    """Create SQLAlchemy engine with configuration.
+) -> AsyncEngine:
+    """Create SQLAlchemy async engine with configuration.
 
     Args:
         database_url: Database connection string
         echo: Whether to log SQL queries (default: False)
-        **engine_kwargs: Additional arguments passed to create_engine
+        **engine_kwargs: Additional arguments passed to create_async_engine
 
     Returns:
-        Configured SQLAlchemy engine
+        Configured SQLAlchemy AsyncEngine
     """
-    engine = create_engine(
+    engine = create_async_engine(
         database_url,
         echo=echo,
         **engine_kwargs,
@@ -34,24 +38,26 @@ def setup_db(
     return engine
 
 
-engine = setup_db(
-    settings.DATABASE_URL,
-    echo=(settings.SQLALCHEMY_LOG_LEVEL == "DEBUG")
+engine = setup_async_db(
+    settings.DATABASE_URL, echo=(settings.SQLALCHEMY_LOG_LEVEL == "DEBUG")
 )
 logger.info(f"Database connection established: {settings.DATABASE_URL.split('@')[-1]}")
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
+)
 logger.info("Database session management setup complete.")
 
 
-def get_db():
-    """Dependency to get database session for FastAPI endpoints.
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency to get async database session for FastAPI endpoints.
 
     Usage:
         @app.get("/items")
-        def get_items(db: Session = Depends(get_db)):
-            items = db.query(Item).all()
+        async def get_items(db: AsyncSession = Depends(get_db)):
+            result = await db.execute(select(Item))
+            items = result.scalars().all()
             return items
     """
-    with SessionLocal() as db:
+    async with AsyncSessionLocal() as db:
         yield db

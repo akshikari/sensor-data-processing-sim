@@ -16,7 +16,7 @@ from typing import Annotated
 
 
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.api_schemas import (
     AccelerometerCreate,
@@ -48,12 +48,12 @@ router = APIRouter(prefix="/accelerometer", tags=["Accelerometer"])
         404: {"description": "Sensor not found"},
     },
 )
-def get_accelerometer(id: UUID, db: Annotated[Session, Depends(get_db)]):
+async def get_accelerometer(id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
     """Retrieve the configuration and current state of an accelerometer sensor with the given ID."""
     try:
         service = AccelerometerService(db)
 
-        result = service.get_accelerometer(id)
+        result = await service.get_accelerometer(id)
 
         return result
     except ResourceNotFoundError as err:
@@ -106,8 +106,8 @@ def get_accelerometer(id: UUID, db: Annotated[Session, Depends(get_db)]):
         },
     },
 )
-def create_accelerometer(
-    accelerometer: AccelerometerCreate, db: Annotated[Session, Depends(get_db)]
+async def create_accelerometer(
+    accelerometer: AccelerometerCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ):
     """Create a virtual accelerometer sensor that generates realistic gait motion data.
 
@@ -140,7 +140,7 @@ def create_accelerometer(
     """
     try:
         service = AccelerometerService(db)
-        result = service.create_accelerometer(accelerometer)
+        result = await service.create_accelerometer(accelerometer)
         return result
     except ResourceAlreadyExistsError as err:
         raise HTTPException(
@@ -174,10 +174,10 @@ def create_accelerometer(
         503: {"description": "Update failed"},
     },
 )
-def update_accelerometer(
+async def update_accelerometer(
     id: UUID,
     accelerometer: AccelerometerUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Update the configuration of an existing accelerometer sensor.
 
@@ -200,7 +200,7 @@ def update_accelerometer(
     """
     try:
         service = AccelerometerService(db)
-        result = service.update_accelerometer(id, accelerometer)
+        result = await service.update_accelerometer(id, accelerometer)
         return result
     except ResourceNotFoundError as err:
         raise HTTPException(
@@ -230,7 +230,7 @@ def update_accelerometer(
         500: {"description": "Deletion failed"},
     },
 )
-def delete_accelerometer(id: UUID, db: Annotated[Session, Depends(get_db)]):
+async def delete_accelerometer(id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
     """Delete an accelerometer with the given ID.
 
     ## Parameters
@@ -239,7 +239,7 @@ def delete_accelerometer(id: UUID, db: Annotated[Session, Depends(get_db)]):
     """
     try:
         service = AccelerometerService(db)
-        service.delete_accelerometer(id)
+        await service.delete_accelerometer(id)
         return
     except ResourceNotFoundError as err:
         raise HTTPException(

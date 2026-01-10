@@ -1,20 +1,9 @@
-"""FastAPI routes for sensor type management.
-
-This module defines the REST API endpoints for managing sensor type.
-Endpoints:
-    GET /sensor_type/{id} - Retrieve a sensor by ID
-    POST /sensor_type - Create a new sensor
-    PATCH /sensor_type/{id} - Update an existing sensor
-    DELETE /sensor_type/{id} - Soft delete an existing sensor type
-"""
-
 import logging
 from uuid import UUID
 from typing import Annotated
 
-
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.api_schemas import (
     SensorTypeCreate,
@@ -39,19 +28,17 @@ router = APIRouter(prefix="/sensor-type", tags=["Sensor Type"])
     "/{id}",
     summary="Get sensor type",
     response_model=SensorTypeResponse,
-    response_description="Sensor configuration and current state",
+    response_description="Sensor type details",
     responses={
-        200: {"description": "Sensor retrieved successfully"},
-        404: {"description": "Sensor not found"},
+        200: {"description": "Sensor type retrieved successfully"},
+        404: {"description": "Sensor type not found"},
     },
 )
-def get_sensor_type(id: UUID, db: Annotated[Session, Depends(get_db)]):
-    """Retrieve the configuration and current state of an sensor type with the given ID."""
+async def get_sensor_type(id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
+    """Retrieve the details of a sensor type with the given ID."""
     try:
         service = SensorTypeService(db)
-
-        result = service.get_sensor_type(id)
-
+        result = await service.get_sensor_type(id)
         return result
     except ResourceNotFoundError as err:
         raise HTTPException(
@@ -70,48 +57,29 @@ def get_sensor_type(id: UUID, db: Annotated[Session, Depends(get_db)]):
     status_code=status.HTTP_201_CREATED,
     response_model=SensorTypeResponse,
     summary="Create sensor type",
-    response_description="Newly created sensor type.",
+    response_description="Newly created sensor type",
     responses={
-        201: {
-            "description": "Sensor created successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "name": "accelerometer",
-                    }
-                }
-            },
-        },
-        422: {
-            "description": "Sensor type creation failed due to data constraint violations."
-        },
+        201: {"description": "Sensor type created successfully"},
+        409: {"description": "Sensor type already exists"},
+        422: {"description": "Sensor type creation failed due to validation errors"},
         500: {
-            "description": "Sensor type creation failed due to internal system error."
+            "description": "Sensor type creation failed due to internal system error"
         },
     },
 )
-def create_sensor_type(
-    sensor_type: SensorTypeCreate, db: Annotated[Session, Depends(get_db)]
+async def create_sensor_type(
+    sensor_type: SensorTypeCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ):
-    """Create a virtual sensor type
+    """Create a new sensor type definition.
 
     ## Parameters
 
-    - **id** (required): Identifier for the sensor type
-    - **name** (required): Name of the sensor type (accelerometer, gyroscope, etc.)
-
-    ## Example Request
-    ```json
-    {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "name": "accelerometer"
-    }
-    ```
+    - **name** (required): Name of the sensor type (e.g. "accelerometer")
+    - **id** (optional): UUID for the sensor type. Auto-generated if omitted.
     """
     try:
         service = SensorTypeService(db)
-        result = service.create_sensor_type(sensor_type)
+        result = await service.create_sensor_type(sensor_type)
         return result
     except ResourceAlreadyExistsError as err:
         raise HTTPException(
@@ -145,27 +113,21 @@ def create_sensor_type(
         503: {"description": "Update failed"},
     },
 )
-def update_sensor_type(
+async def update_sensor_type(
     id: UUID,
     sensor_type: SensorTypeUpdate,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Update an existing sensor type.
 
     ## Parameters
 
-    - **sensor_type** (required): fields to update with their new values
-
-    ## Example Request
-    ```json
-    {
-        "name": "gyroscope"
-    }
-    ```
+    - **id** (required): Identifier for the sensor type
+    - **sensor_type** (optional): fields to update
     """
     try:
         service = SensorTypeService(db)
-        result = service.update_sensor_type(id, sensor_type)
+        result = await service.update_sensor_type(id, sensor_type)
         return result
     except ResourceNotFoundError as err:
         raise HTTPException(
@@ -187,16 +149,16 @@ def update_sensor_type(
 @router.delete(
     "/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Mark a sensor type as archived.",
+    summary="Archive a sensor type",
     response_description="No content",
     responses={
         204: {"description": "Sensor type successfully archived"},
-        404: {"description": "Sensor type with given ID not found"},
+        404: {"description": "Sensor type not found"},
         500: {"description": "Deletion failed"},
     },
 )
-def delete_sensor_type(id: UUID, db: Annotated[Session, Depends(get_db)]):
-    """Delete a sensor type with the given ID.
+async def delete_sensor_type(id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
+    """Archive a sensor type.
 
     ## Parameters
 
@@ -204,12 +166,12 @@ def delete_sensor_type(id: UUID, db: Annotated[Session, Depends(get_db)]):
     """
     try:
         service = SensorTypeService(db)
-        service.delete_sensor_type(id)
+        await service.delete_sensor_type(id)
         return
     except ResourceNotFoundError as err:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No sensor type found with given ID.",
+            detail="Sensor type not found.",
         ) from err
     except DatabaseError as err:
         logger.error(f"Database error occurred: {err}", extra={"recordId": id})
