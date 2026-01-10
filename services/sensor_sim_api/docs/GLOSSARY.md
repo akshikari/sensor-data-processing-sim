@@ -45,16 +45,16 @@ vector `[0, 0, -9.81]`
 
 Coordinate system that is "attached" to the robot/sensor. This is what the
 accelerometer measures acceleration along the axes of this coordinate plane.
-In the accelerometer model, we first calculate acceleration in the world frame,
-then convert it to the body frame to properly simulate accelerometer outputs.
+In the accelerometer model, acceleration is first calculated in the world frame,
+then converted to the body frame to properly simulate accelerometer outputs.
 
 ## World Frame
 
 A fixed coordinate system representing the external environment. 3 axes:
 x = forward/back, y = left/right, z = up/down, or `[x, y, z]`. Acceleration
 is calculated along each of these axes before applying a Rotation Matrix to
-convert the values to the body frame. We calculate acceleration in the world
-frame first because that is naturally how we describe motion through space.
+convert the values to the body frame. Acceleration is calculated in the world
+frame first because that is naturally how motion through space is described.
 It's the trajectory of a body relative to a fixed environment.
 
 ## Rotation Matrix
@@ -92,7 +92,7 @@ body frame, hence why they are important to calculate.
 
 The value representing the angle of rotation about the z-axis. Analagous to
 turning your head left and right. For now, this is a constant 0 in the
-accelerometer model as we assume the robot is walking in a straight line
+accelerometer model as the assumption is that the robot is walking in a straight line
 for simplicity's sake. A positive value represents the robot turning left,
 following the right-hand rule.
 
@@ -177,7 +177,7 @@ in the SHM formula.
 
 ## Orientation
 
-How a body is rotated in 3D space relative to some reference frame (in our case
+How a body is rotated in 3D space relative to some reference frame (in this case
 the world frame).
 
 ## Sensor
@@ -250,7 +250,7 @@ be used to resume a stream session that was previously paused.
 
 ## Producer
 
-The process that is creating the data being pushed to the stream. In our case
+The process that is creating the data being pushed to the stream. In this case
 it would be the sensor data generators.
 
 ## Consumer
