@@ -1,7 +1,6 @@
-"""Production-ready logging configuration for the sensor API.
+"""Logging configuration for the sensor metadata API.
 
-This module provides structured logging with proper formatting, log levels,
-and support for both development (human-readable) and production (JSON) formats.
+This module provides structured logging with proper formatting and log levels.
 """
 
 import logging
@@ -61,10 +60,7 @@ def setup_logging(level: str = "INFO", show_access_logs: bool = False) -> None:
 def get_logger(name: str) -> logging.Logger:
     """Get a logger instance for the given module.
 
-    Args:
-        name: Logger name (typically __name__ from the calling module)
-
-    Returns:
-        Configured logger instance under the 'app' namespace
+    :param name: Logger name (typically __name__ from the calling module)
+    :return: Configured logger instance under the 'app' namespace
     """
     return logging.getLogger(name)

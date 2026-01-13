@@ -39,7 +39,13 @@ async def get_all_sensor_types(
     skip: int = 0,
     limit: int = 100,
 ):
-    """Retrieve a paginated list of all active sensor types."""
+    """Retrieve a paginated list of all active sensor types.
+
+    ## Parameters
+
+    - **skip** (optional): The number of pages to skip in the paginated results. Defaults to 0
+    - **limit** (optional): The number of records returned per page. Defaults to 100
+    """
     try:
         service = SensorTypeService(db)
         result = await service.get_all_sensor_types(skip=skip, limit=limit)
@@ -63,7 +69,12 @@ async def get_all_sensor_types(
     },
 )
 async def get_sensor_type(id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
-    """Retrieve the details of a sensor type with the given ID."""
+    """Retrieve the details of a sensor type with the given ID.
+
+    ## Parameters
+
+    - **id** (required): The ID of the sensor type to retrieve.
+    """
     try:
         service = SensorTypeService(db)
         result = await service.get_sensor_type(id)

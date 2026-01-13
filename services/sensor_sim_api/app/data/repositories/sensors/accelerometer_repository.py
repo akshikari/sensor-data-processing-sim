@@ -171,7 +171,7 @@ class AccelerometerRepository:
         """Delete an accelerometer with the provided ID
 
         :param id: ID of the accelerometer to delete
-        :return:
+        :return: The deleted accelerometer or null if not found or already archived.
         """
 
         stmt = (

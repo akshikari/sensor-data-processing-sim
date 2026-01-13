@@ -40,7 +40,6 @@ class SensorTypeRepository:
         :param limit: Maximum number of records to return
         :return: Tuple containing (list of sensor types, total count)
         """
-        # Query for items
         stmt = (
             select(SensorType)
             .where(SensorType.archived == False)
@@ -49,7 +48,6 @@ class SensorTypeRepository:
             .limit(limit)
         )
 
-        # Query for total count
         count_stmt = (
             select(func.count())
             .select_from(SensorType)
@@ -163,7 +161,7 @@ class SensorTypeRepository:
         """Delete an sensor type with the provided ID
 
         :param id: ID of the sensor type to delete
-        :return:
+        :return: The deleted sensor type or null if not found or already archived.
         """
 
         stmt = (

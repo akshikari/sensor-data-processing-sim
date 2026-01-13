@@ -53,7 +53,13 @@ async def get_all_accelerometers(
     skip: int = 0,
     limit: int = 100,
 ):
-    """Retrieve a paginated list of all active accelerometer sensors."""
+    """Retrieve a paginated list of all active accelerometer sensors.
+
+    ## Parameters
+
+    - **skip** (optional): The number of pages to skip in the paginated results. Defaults to 0
+    - **limit** (optional): The number of records returned per page. Defaults to 100
+    """
     try:
         service = AccelerometerService(db)
         result = await service.get_all_accelerometers(skip=skip, limit=limit)
@@ -77,7 +83,12 @@ async def get_all_accelerometers(
     },
 )
 async def get_accelerometer(id: UUID, db: Annotated[AsyncSession, Depends(get_db)]):
-    """Retrieve the configuration and current state of an accelerometer sensor with the given ID."""
+    """Retrieve the configuration and current state of an accelerometer sensor with the given ID.
+
+    ## Parameters
+
+    - **id** (required): The ID of the accelerometer to retrieve.
+    """
     try:
         service = AccelerometerService(db)
 

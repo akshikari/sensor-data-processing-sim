@@ -21,13 +21,11 @@ def setup_async_db(
 ) -> AsyncEngine:
     """Create SQLAlchemy async engine with configuration.
 
-    Args:
-        database_url: Database connection string
-        echo: Whether to log SQL queries (default: False)
-        **engine_kwargs: Additional arguments passed to create_async_engine
+    :param database_url: Database connection string
+    :param echo: Whether to log SQL queries (default: False)
+    :param engine_kwargs: Additional arguments passed to create_async_engine
 
-    Returns:
-        Configured SQLAlchemy AsyncEngine
+    :return: Configured SQLAlchemy AsyncEngine
     """
     engine = create_async_engine(
         database_url,
