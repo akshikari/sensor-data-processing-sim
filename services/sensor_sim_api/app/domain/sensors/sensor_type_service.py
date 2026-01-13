@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ResourceNotFoundError
-from app.data.models.api_schemas import (
+from app.api.schemas import (
     SensorTypeCreate,
     SensorTypeResponse,
     SensorTypeUpdate,

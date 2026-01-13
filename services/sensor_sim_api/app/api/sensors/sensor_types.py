@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data.models.api_schemas import (
+from app.api.schemas import (
     SensorTypeCreate,
     SensorTypeUpdate,
     SensorTypeResponse,

@@ -114,6 +114,7 @@ class GenerateDataParamsCreate(BaseModel):
     )
     @classmethod
     def apply_phase_normalization(cls, v: float) -> float:
+        """Normalizes phase radians to be between 0 and 2*pi."""
         return _norm_phase(v)
 
 
@@ -144,6 +145,7 @@ class AnomalousDataModifierParamsCreate(BaseModel):
 
     @model_validator(mode="after")
     def require_frequency_if_modifier_set(self):
+        """Validation to ensure step_frequency is specified if any anomalous modifier parameter is specified."""
         modifiers = [self.z_amp_modifier, self.time_drift_offset, self.step_time_delay]
 
         is_modifying = any(m is not None for m in modifiers)
@@ -167,7 +169,7 @@ class AnomalyState(BaseModel):
 class StreamState(BaseModel):
     """
     State of persisted stream metadata.
-    We will derive the local monotonic baseline from 'start_ts_utc' at runtime.
+    The local baseline is derived from 'start_ts_utc' at runtime.
     """
 
     id: UUID = Field(..., description="Unique identifier for the stream/sensor.")
@@ -230,7 +232,6 @@ class AccelerometerCreate(BaseModel):
 class GenerateDataParamsUpdate(BaseModel):
     """
     Partial update schema.
-    Notice we re-use the Field constraints (gt=0) so invalid updates are rejected.
     """
 
     gait_frequency_hz: float | None = Field(default=None, gt=0)
@@ -259,6 +260,7 @@ class GenerateDataParamsUpdate(BaseModel):
     )
     @classmethod
     def apply_phase_normalization(cls, v: float | None) -> float | None:
+        """Normalize phase radians to be between 0 and 2*pi."""
         if v is None:
             return None
         return _norm_phase(v)
