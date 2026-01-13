@@ -1,6 +1,6 @@
 [project]
 name = "sensor-sim-api"
-version = "0.4.0"
+version = "0.6.0"
 description = "REST API web services for interacting with sensor data generator library"
 readme = "README.md"
 requires-python = ">=3.12"
