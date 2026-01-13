@@ -6,6 +6,7 @@ from fastapi.routing import APIRoute
 
 from app.api import api_router
 from app.core.logging import setup_logging, get_logger
+from app.core.config import settings
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 setup_logging(level=LOG_LEVEL)
@@ -44,3 +45,12 @@ app = FastAPI(
 app.include_router(api_router)
 
 # TODO: CORS
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for load balancers."""
+    return {
+        "status": "healthy",
+        "version": settings.API_VERSION,
+    }
