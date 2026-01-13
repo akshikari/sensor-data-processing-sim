@@ -153,7 +153,7 @@ class AccelerometerGenerator:
     ) -> npt.NDArray[np.float64]:
         """
         Core logic for calculating the the simulated accelerometer readings at the effective time t_eff.
-        Starts by calculating roll, pitch, yaw in world frame, then accleration along x, y, and z axes
+        Starts by calculating roll, pitch, yaw in world frame, then acceleration along x, y, and z axes
         in the world frame, before finally converting acceleration to the body frame and adding
         simulated noise.
 
@@ -292,10 +292,6 @@ class AccelerometerGenerator:
             if self.stream_state.sample_index < current_sample_index:
                 self.stream_state.sample_index = current_sample_index
 
-            # If resuming, start from current position (skipping missed samples)
-            if self.stream_state.sample_index < current_sample_index:
-                self.stream_state.sample_index = current_sample_index
-
         next_sample_time = stream_start + timedelta(
             seconds=self.stream_state.sample_index * stream_params["period"]
         )
@@ -366,10 +362,6 @@ class AccelerometerGenerator:
             now = datetime.now(timezone.utc)
             elapsed_real = (now - stream_start).total_seconds()
             current_sample_index = int(elapsed_real / stream_params["period"])
-
-            # If resuming, start from current position (skipping missed samples)
-            if self.stream_state.sample_index < current_sample_index:
-                self.stream_state.sample_index = current_sample_index
 
             # If resuming, start from current position (skipping missed samples)
             if self.stream_state.sample_index < current_sample_index:
