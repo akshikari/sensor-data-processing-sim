@@ -183,6 +183,11 @@ class StreamState(BaseModel):
         default=0, ge=0, description="The current sequence number."
     )
 
+    @field_serializer("id")
+    def serialize_uuid(self, value: UUID) -> str:
+        """Convert UUID to string for JSON serialization."""
+        return str(value)
+
 
 class AccelerometerCreate(BaseModel):
     """Configuration for creating an accelerometer sensor simulator."""

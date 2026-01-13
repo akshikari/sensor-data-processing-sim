@@ -99,7 +99,7 @@ class AccelerometerService:
         :raises ValidationError: If creating the accelerometer violates any database schema constraints.
         :return: Newly updated accelerometer.
         """
-        updates_data = updates.model_dump(exclude_unset=True)
+        updates_data = updates.model_dump(exclude_unset=True, mode="json")
         updated_accelerometer = await self.repository.update_accelerometer(
             id, updates_data
         )
